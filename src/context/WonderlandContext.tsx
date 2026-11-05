@@ -20,7 +20,6 @@ interface WishItem {
 }
 
 interface WonderlandContextType {
-  // Navigation & View
   activeTab: string;
   setActiveTab: (tab: string) => void;
   hasEntered: boolean;
@@ -28,11 +27,9 @@ interface WonderlandContextType {
   showWelcomeModal: boolean;
   setShowWelcomeModal: (val: boolean) => void;
 
-  // Audio
   soundEnabled: boolean;
   toggleSound: () => void;
 
-  // Locality & Character
   characterPos: { x: number; y: number };
   setCharacterPos: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
   characterDir: "left" | "right" | "up" | "down";
@@ -45,40 +42,33 @@ interface WonderlandContextType {
   visitLocation: (id: string) => void;
   moveToLocation: (x: number, y: number, name: string) => void;
 
-  // Diyas & Activities
   litDiyas: number[];
   lightDiya: (index: number) => void;
   lightAllDiyasDemo: () => void;
   totalLitDiyasCount: number;
 
-  // Timeline & Letters
   timeline: MemoryMilestone[];
   letters: LoveLetter[];
   readLetters: string[];
   markLetterRead: (id: string) => void;
   updateLetter: (id: string, newLetter: Partial<LoveLetter>) => void;
 
-  // Bucket list
   bucketList: BucketListItem[];
   toggleBucketItem: (id: string) => void;
   addBucketItem: (title: string, category: BucketListItem["category"]) => void;
 
-  // Reasons garden
   bloomedFlowers: number[];
   bloomFlower: (id: number) => void;
   flowers: ReasonFlower[];
 
-  // Lanterns & Wishes
   wishes: WishItem[];
   addWish: (text: string) => void;
 
-  // Treasure Hunt & Secret Gifts
   treasureCluesSolved: number;
   solveTreasureClue: () => void;
   foundGifts: string[];
   claimGift: (giftId: string) => void;
 
-  // Final Surprise
   finalSurpriseUnlocked: boolean;
   showFinalSurprise: boolean;
   setShowFinalSurprise: (val: boolean) => void;
@@ -88,6 +78,16 @@ interface WonderlandContextType {
 const WonderlandContext = createContext<WonderlandContextType | undefined>(undefined);
 
 const STORAGE_KEY = "aalekh_sana_diwali_v1";
+
+function getStoredData() {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function WonderlandProvider({ children }: { children: ReactNode }) {
   const [activeTab, setActiveTab] = useState<string>("landing");
@@ -100,45 +100,64 @@ export function WonderlandProvider({ children }: { children: ReactNode }) {
   const [characterDir, setCharacterDir] = useState<"left" | "right" | "up" | "down">("down");
   const [characterSpeech, setCharacterSpeech] = useState<string | null>("Happy Diwali Sana! Let's explore ❤️");
   const [isWalking, setIsWalking] = useState<boolean>(false);
-  const [visitedLocations, setVisitedLocations] = useState<string[]>([]);
 
-  // Diyas & Unlocks
-  const [litDiyas, setLitDiyas] = useState<number[]>([0, 1, 2]); // Initial warm glow
+  // Stored state with lazy initializers to avoid cascading setState in effects
+  const [visitedLocations, setVisitedLocations] = useState<string[]>(() => {
+    const data = getStoredData();
+    return data?.visitedLocations || [];
+  });
+
+  const [litDiyas, setLitDiyas] = useState<number[]>(() => {
+    const data = getStoredData();
+    return data?.litDiyas || [0, 1, 2];
+  });
+
   const [timeline] = useState<MemoryMilestone[]>(INITIAL_TIMELINE);
-  const [letters, setLetters] = useState<LoveLetter[]>(INITIAL_LETTERS);
-  const [readLetters, setReadLetters] = useState<string[]>([]);
-  const [bucketList, setBucketList] = useState<BucketListItem[]>(INITIAL_BUCKET_LIST);
-  const [bloomedFlowers, setBloomedFlowers] = useState<number[]>([1]);
+
+  const [letters, setLetters] = useState<LoveLetter[]>(() => {
+    const data = getStoredData();
+    return data?.letters || INITIAL_LETTERS;
+  });
+
+  const [readLetters, setReadLetters] = useState<string[]>(() => {
+    const data = getStoredData();
+    return data?.readLetters || [];
+  });
+
+  const [bucketList, setBucketList] = useState<BucketListItem[]>(() => {
+    const data = getStoredData();
+    return data?.bucketList || INITIAL_BUCKET_LIST;
+  });
+
+  const [bloomedFlowers, setBloomedFlowers] = useState<number[]>(() => {
+    const data = getStoredData();
+    return data?.bloomedFlowers || [1];
+  });
+
   const [flowers] = useState<ReasonFlower[]>(INITIAL_REASON_FLOWERS);
-  const [wishes, setWishes] = useState<WishItem[]>([
-    { id: "w-0", text: "May Aalekh & Sana celebrate every Diwali together forever ❤️🪔", date: "2026-11-06" },
-  ]);
-  const [treasureCluesSolved, setTreasureCluesSolved] = useState<number>(0);
-  const [foundGifts, setFoundGifts] = useState<string[]>([]);
+
+  const [wishes, setWishes] = useState<WishItem[]>(() => {
+    const data = getStoredData();
+    return (
+      data?.wishes || [
+        { id: "w-0", text: "May Aalekh & Sana celebrate every Diwali together forever ❤️🪔", date: "2026-11-06" },
+      ]
+    );
+  });
+
+  const [treasureCluesSolved, setTreasureCluesSolved] = useState<number>(() => {
+    const data = getStoredData();
+    return data?.treasureCluesSolved || 0;
+  });
+
+  const [foundGifts, setFoundGifts] = useState<string[]>(() => {
+    const data = getStoredData();
+    return data?.foundGifts || [];
+  });
+
   const [showFinalSurprise, setShowFinalSurprise] = useState<boolean>(false);
 
-  // Load from local storage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.visitedLocations) setVisitedLocations(data.visitedLocations);
-        if (data.litDiyas) setLitDiyas(data.litDiyas);
-        if (data.readLetters) setReadLetters(data.readLetters);
-        if (data.bucketList) setBucketList(data.bucketList);
-        if (data.bloomedFlowers) setBloomedFlowers(data.bloomedFlowers);
-        if (data.wishes) setWishes(data.wishes);
-        if (data.treasureCluesSolved) setTreasureCluesSolved(data.treasureCluesSolved);
-        if (data.foundGifts) setFoundGifts(data.foundGifts);
-        if (data.letters) setLetters(data.letters);
-      }
-    } catch {
-      // LocalStorage error fallback
-    }
-  }, []);
-
-  // Save on state change
+  // Sync state to local storage on changes
   useEffect(() => {
     try {
       const data = {
@@ -172,7 +191,6 @@ export function WonderlandProvider({ children }: { children: ReactNode }) {
     setIsWalking(true);
     soundManager.playFootstep();
 
-    // Direction calculation
     if (Math.abs(targetX - characterPos.x) > Math.abs(targetY - characterPos.y)) {
       setCharacterDir(targetX > characterPos.x ? "right" : "left");
     } else {
@@ -252,16 +270,11 @@ export function WonderlandProvider({ children }: { children: ReactNode }) {
     setFoundGifts((prev) => (prev.includes(giftId) ? prev : [...prev, giftId]));
   };
 
-  // Conditions for unlocking final surprise:
-  // - Lit at least 7 diyas
-  // - Visited at least 4 locations
-  // - Solved at least 2 treasure clues or read 3 letters
   const diyasCondition = litDiyas.length >= 7;
   const visitCondition = visitedLocations.length >= 4;
   const deepCondition = readLetters.length >= 2 || treasureCluesSolved >= 2;
   const finalSurpriseUnlocked = diyasCondition && visitCondition && deepCondition;
 
-  // Calculate progress percentage
   const diyasScore = Math.min(litDiyas.length / 10, 1) * 35;
   const visitScore = Math.min(visitedLocations.length / 6, 1) * 35;
   const engagementScore = Math.min((readLetters.length + treasureCluesSolved + foundGifts.length) / 5, 1) * 30;
@@ -328,4 +341,3 @@ export function useWonderland() {
   }
   return ctx;
 }
-

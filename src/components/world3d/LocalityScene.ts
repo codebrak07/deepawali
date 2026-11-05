@@ -326,5 +326,10 @@ export class LocalitySceneEngine {
       this.nearbyStation = nearest;
       this.onProximityChange?.(this.nearbyStation);
     }
+
+    // When near Station B, automatically flow color into the 3D street Rangoli
+    if (nearest === "station-b" && this.rangoliProgress < 1) {
+      this.rangoliProgress = Math.min(1, this.rangoliProgress + 0.01);
+    }
   }
 }

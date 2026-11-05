@@ -12,7 +12,6 @@ import {
   Calendar,
   Mail,
   Home,
-  CheckCircle2,
   Gamepad2,
 } from "lucide-react";
 import { INITIAL_TIMELINE, INITIAL_LETTERS, INITIAL_BUCKET_LIST, LoveLetter } from "@/data/defaultData";
@@ -409,3 +408,4 @@ export function StorybookLanding({ onEnterExploreMode, onOpenSurprise }: Storybo
     </div>
   );
 }
+

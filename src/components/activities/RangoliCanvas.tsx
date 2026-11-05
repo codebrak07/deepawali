@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Sparkles, RotateCcw, Download, Palette } from "lucide-react";
+import { RotateCcw, Download, Palette } from "lucide-react";
 import confetti from "canvas-confetti";
 
 export function RangoliCanvas() {

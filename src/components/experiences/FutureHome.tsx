@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Home, Heart, Moon, Coffee, Flower2, Key, Check } from "lucide-react";
+import { Sparkles, Home, Heart, Moon, Flower2, Key, Check } from "lucide-react";
 import { GlowingDiya } from "@/components/ui/GlowingDiya";
 
 interface HomeArea {

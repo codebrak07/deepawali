@@ -152,3 +152,4 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
     </div>
   );
 }
+

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Sparkles, Heart, Flame, Play, Pause } from "lucide-react";
 import { soundManager } from "@/components/audio/SoundManager";
 
@@ -16,6 +16,8 @@ interface Particle {
   decay: number;
 }
 
+const FIREWORK_COLORS = ["#F59E0B", "#EF4444", "#EC4899", "#38BDF8", "#10B981", "#FEF08A"];
+
 export function FireworksShow() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<Particle[]>([]);
@@ -23,14 +25,12 @@ export function FireworksShow() {
   const [autoPlay, setAutoPlay] = useState<boolean>(true);
   const [fireworkType, setFireworkType] = useState<"mixed" | "heart" | "gold">("heart");
 
-  const colors = ["#F59E0B", "#EF4444", "#EC4899", "#38BDF8", "#10B981", "#FEF08A"];
-
-  const launchRocket = (targetX: number, targetY: number, forceHeart = false) => {
+  const launchRocket = useCallback((targetX: number, targetY: number, forceHeart = false) => {
     soundManager.playFireworkLaunch();
 
     const isHeart = forceHeart || fireworkType === "heart" || (fireworkType === "mixed" && Math.random() < 0.4);
     const particleCount = isHeart ? 60 : 70;
-    const baseColor = colors[Math.floor(Math.random() * colors.length)];
+    const baseColor = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
 
     if (isHeart) {
       // Parametric heart formula: x = 16 sin^3(t), y = -(13 cos(t) - 5 cos(2t) - 2 cos(3t) - cos(4t))
@@ -70,7 +70,7 @@ export function FireworksShow() {
         });
       }
     }
-  };
+  }, [fireworkType]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -126,7 +126,7 @@ export function FireworksShow() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [autoPlay, fireworkType]);
+  }, [autoPlay, launchRocket]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;

@@ -8,7 +8,6 @@ import { StorybookLanding } from "@/components/story/StorybookLanding";
 import { StationModals } from "@/components/ui/StationModals";
 import { FinalSurpriseModal } from "@/components/surprise/FinalSurpriseModal";
 import { useWonderland } from "@/context/WonderlandContext";
-import { soundManager } from "@/components/audio/SoundManager";
 
 export default function Page() {
   const containerRef = useRef<HTMLDivElement | null>(null);

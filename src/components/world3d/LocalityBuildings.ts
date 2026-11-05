@@ -11,7 +11,6 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
   // Reusable Shared Materials
   const plinthMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.9 });
   const trimMat = new THREE.MeshStandardMaterial({ color: 0xe4e4e7, roughness: 0.5 });
-  const roofTileMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.7 });
   const railingMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.8, roughness: 0.3 });
   const doorWoodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.6 });
   const marigoldMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xd97706, emissiveIntensity: 0.6 });

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Heart, BellRing } from "lucide-react";
+import { BellRing } from "lucide-react";
 import { GlowingDiya } from "@/components/ui/GlowingDiya";
 import { soundManager } from "@/components/audio/SoundManager";
 import confetti from "canvas-confetti";

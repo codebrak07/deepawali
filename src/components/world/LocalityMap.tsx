@@ -27,7 +27,7 @@ export function LocalityMap() {
   } = useWonderland();
 
   const [selectedLocation, setSelectedLocation] = useState<LocalityPoint | null>(null);
-  const [showControlsHint, setShowControlsHint] = useState<boolean>(true);
+  const [showControlsHint] = useState<boolean>(true);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   // Keyboard navigation (WASD or Arrow Keys)

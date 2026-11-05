@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, Heart, X, Send, Palette, Flame } from "lucide-react";
+import { Sparkles, Heart, X, Send, Palette, Flame, CheckCircle2 } from "lucide-react";
 import { soundManager } from "@/components/audio/SoundManager";
 import confetti from "canvas-confetti";
 
@@ -21,10 +21,12 @@ export function StationModals({
   // Station A state
   const [diyaMemoryIdx, setDiyaMemoryIdx] = useState(0);
 
-  // Station B (Rangoli) Hold State
-  const [rangoliPercent, setRangoliPercent] = useState(25);
-  const [isHoldingRangoli, setIsHoldingRangoli] = useState(false);
-  const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Station B (Rangoli) Automatic Color Flow & Cursor Animation State
+  const [rangoliPercent, setRangoliPercent] = useState(0);
+  const [cursorPos, setCursorPos] = useState({ x: 50, y: 50 });
+  const [powderColor, setPowderColor] = useState("#F59E0B");
+  const [isCompleted, setIsCompleted] = useState(false);
+  const animFrameRef = useRef<number | null>(null);
 
   // Station C (Lantern) Wish State
   const [wishText, setWishText] = useState("");
@@ -50,37 +52,49 @@ export function StationModals({
     },
   ];
 
-  // Station B Hold Progress loop
+  // Automatic powder cursor flow animation for Rangoli
   useEffect(() => {
-    if (isHoldingRangoli) {
-      holdIntervalRef.current = setInterval(() => {
-        setRangoliPercent((prev) => {
-          const next = Math.min(100, prev + 2.5);
-          onRangoliProgressUpdate(next / 100);
-          if (next >= 100) {
-            setIsHoldingRangoli(false);
-            soundManager.playDiyaChime();
-            confetti({
-              particleCount: 50,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ["#F59E0B", "#EF4444", "#EC4899", "#06B6D4"],
-            });
-          }
-          return next;
+    if (stationId !== "station-b") return;
+
+    soundManager.playDiyaChime();
+    const startTime = Date.now();
+    const colors = ["#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#10B981", "#FEF08A"];
+
+    const runFlow = () => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      // Spiral parametric path: r = a * theta
+      const angle = elapsed * 3.5;
+      const radius = Math.min(42, elapsed * 10);
+      const cx = 50 + Math.cos(angle) * radius;
+      const cy = 50 + Math.sin(angle) * radius;
+
+      setCursorPos({ x: cx, y: cy });
+      setPowderColor(colors[Math.floor(elapsed * 2) % colors.length]);
+
+      // Fill percent progresses smoothly from 0% to 100% over 3.2 seconds
+      const progress = Math.min(100, (elapsed / 3.2) * 100);
+      setRangoliPercent(progress);
+      onRangoliProgressUpdate(progress / 100);
+
+      if (progress < 100) {
+        animFrameRef.current = requestAnimationFrame(runFlow);
+      } else {
+        setIsCompleted(true);
+        confetti({
+          particleCount: 50,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ["#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#10B981"],
         });
-      }, 50);
-    } else {
-      if (holdIntervalRef.current) {
-        clearInterval(holdIntervalRef.current);
-        holdIntervalRef.current = null;
       }
-    }
+    };
+
+    animFrameRef.current = requestAnimationFrame(runFlow);
 
     return () => {
-      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isHoldingRangoli, onRangoliProgressUpdate]);
+  }, [stationId, onRangoliProgressUpdate]);
 
   if (!stationId) return null;
 
@@ -92,6 +106,32 @@ export function StationModals({
       spread: 50,
       origin: { y: 0.65 },
       colors: ["#F59E0B", "#FDE68A", "#F97316"],
+    });
+  };
+
+  const handleRangoliCanvasTap = () => {
+    // Instant tap-to-complete or sprinkle more colors
+    setRangoliPercent(100);
+    setIsCompleted(true);
+    onRangoliProgressUpdate(1.0);
+    soundManager.playDiyaChime();
+    confetti({
+      particleCount: 50,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ["#F59E0B", "#EC4899", "#10B981", "#38BDF8"],
+    });
+  };
+
+  const handleRangoliPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setCursorPos({ x, y });
+    setRangoliPercent((prev) => {
+      const next = Math.min(100, prev + 2);
+      onRangoliProgressUpdate(next / 100);
+      return next;
     });
   };
 
@@ -142,7 +182,6 @@ export function StationModals({
               The terracotta lamps are glowing warmly along the street. Tap to reveal each memory:
             </p>
 
-            {/* Memory Card */}
             <div className="p-5 rounded-2xl bg-slate-900/80 border border-amber-500/30 text-left mb-6 shadow-inner">
               <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1.5">
                 <Heart className="w-3.5 h-3.5 fill-current text-rose-500" />
@@ -171,7 +210,7 @@ export function StationModals({
         )}
 
         {/* ======================================================== */}
-        {/* STATION B: DRAW THE RANGOLI */}
+        {/* STATION B: DRAW THE RANGOLI (AUTOMATIC FLOW & COLOR FILL) */}
         {/* ======================================================== */}
         {stationId === "station-b" && (
           <div>
@@ -184,52 +223,122 @@ export function StationModals({
               <span>Hanuman Mandir Chowk</span>
             </div>
 
-            <h3 className="text-xl sm:text-2xl font-serif font-bold text-amber-100 mb-2">
-              Draw the 3D Street Rangoli 🎨
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-amber-100 mb-1">
+              3D Rangoli Powder Flow 🎨
             </h3>
-            <p className="text-xs text-amber-200/70 mb-5">
-              Press and hold the button below to pour turmeric & vermilion powders into the street mandala!
+            <p className="text-xs text-amber-200/70 mb-4">
+              Watch the automatic festive gulal powders flow and fill the mandala petals!
             </p>
 
-            {/* Progress Circular Dial / Bar */}
-            <div className="mb-6 p-4 rounded-2xl bg-slate-900/80 border border-slate-700">
-              <div className="flex justify-between text-xs text-amber-300 font-semibold mb-2">
-                <span>Rangoli Completion</span>
+            {/* Interactive Visual Canvas with Animated Flowing Cursor */}
+            <div
+              onClick={handleRangoliCanvasTap}
+              onPointerMove={handleRangoliPointerMove}
+              className="relative w-56 h-56 sm:w-64 sm:h-64 mx-auto rounded-full bg-[#0a0515] border-2 border-amber-500/40 p-2 shadow-[0_0_40px_rgba(245,158,11,0.3)] overflow-hidden cursor-pointer mb-5"
+              title="Tap anywhere or drag to sprinkle full colors!"
+            >
+              {/* Concentric Rangoli Petal Rings */}
+              <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow">
+                {/* Outer Ring */}
+                <circle cx="50" cy="50" r="44" stroke="#f59e0b" strokeWidth="2" fill="none" opacity="0.6" />
+
+                {/* 12 Outer Petals that fill with vibrant colors */}
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const angle = (i * 360) / 12;
+                  const isFilled = rangoliPercent >= (i / 12) * 80;
+                  return (
+                    <ellipse
+                      key={i}
+                      cx="50"
+                      cy="18"
+                      rx="6"
+                      ry="12"
+                      fill={isFilled ? (i % 2 === 0 ? "#EF4444" : "#F59E0B") : "#334155"}
+                      opacity={isFilled ? "0.95" : "0.3"}
+                      transform={`rotate(${angle} 50 50)`}
+                      className="transition-colors duration-300"
+                    />
+                  );
+                })}
+
+                {/* Inner 8 Lotus Petals */}
+                {Array.from({ length: 8 }).map((_, i) => {
+                  const angle = (i * 360) / 8;
+                  const isFilled = rangoliPercent >= 50 + (i / 8) * 50;
+                  return (
+                    <ellipse
+                      key={i}
+                      cx="50"
+                      cy="32"
+                      rx="4.5"
+                      ry="9"
+                      fill={isFilled ? (i % 2 === 0 ? "#06B6D4" : "#EC4899") : "#1e293b"}
+                      opacity={isFilled ? "0.95" : "0.3"}
+                      transform={`rotate(${angle} 50 50)`}
+                      className="transition-colors duration-300"
+                    />
+                  );
+                })}
+
+                {/* Sacred Center Core */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="8"
+                  fill={rangoliPercent > 20 ? "#FEF08A" : "#475569"}
+                  className="transition-colors duration-300"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="4"
+                  fill={rangoliPercent > 50 ? "#B91C1C" : "#1e293b"}
+                />
+              </svg>
+
+              {/* Animated Floating Powder Cursor Stream */}
+              {!isCompleted && (
+                <div
+                  className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75"
+                  style={{ left: `${cursorPos.x}%`, top: `${cursorPos.y}%` }}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full blur-[1px] animate-ping"
+                    style={{ backgroundColor: powderColor }}
+                  />
+                  <div
+                    className="w-3 h-3 rounded-full shadow-lg border border-white"
+                    style={{ backgroundColor: powderColor }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Progress Dial Bar */}
+            <div className="mb-5 p-3 rounded-xl bg-slate-900/80 border border-slate-700">
+              <div className="flex justify-between text-xs text-amber-300 font-semibold mb-1.5">
+                <span>Vibrant Colors Filling</span>
                 <span>{Math.round(rangoliPercent)}%</span>
               </div>
-              <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
+              <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-cyan-400 transition-all duration-100"
+                  className="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-cyan-400 transition-all duration-150"
                   style={{ width: `${rangoliPercent}%` }}
                 />
               </div>
-              <div className="text-[11px] text-slate-400 mt-2">
-                {rangoliPercent >= 100
-                  ? "✨ Complete! The 3D Rangoli is now glowing in the Chowk!"
-                  : "Hold down to scatter more vibrant petals..."}
+              <div className="text-[11px] text-slate-400 mt-1.5">
+                {isCompleted
+                  ? "🌸 Blooming! The 3D street Rangoli is now fully glowing in the Chowk!"
+                  : "Flowing festive powder trail across petals... (Tap canvas to fill instantly!)"}
               </div>
             </div>
 
-            {/* Touch-and-Hold Button */}
             <button
-              onMouseDown={() => setIsHoldingRangoli(true)}
-              onMouseUp={() => setIsHoldingRangoli(false)}
-              onMouseLeave={() => setIsHoldingRangoli(false)}
-              onTouchStart={() => setIsHoldingRangoli(true)}
-              onTouchEnd={() => setIsHoldingRangoli(false)}
-              className={`w-full py-4 rounded-2xl font-bold text-sm tracking-wide shadow-lg transition-all select-none cursor-pointer ${
-                rangoliPercent >= 100
-                  ? "bg-emerald-600 text-white cursor-default"
-                  : isHoldingRangoli
-                  ? "bg-gradient-to-r from-rose-500 to-amber-500 text-white scale-95 shadow-amber-500/50"
-                  : "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 hover:scale-[1.02]"
-              }`}
+              onClick={onClose}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 font-bold text-xs sm:text-sm tracking-wide shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              {rangoliPercent >= 100
-                ? "Rangoli Masterpiece Complete! 🌸"
-                : isHoldingRangoli
-                ? "Drawing in Progress... ✨"
-                : "Hold to Pour Rangoli Powder 🌸"}
+              <CheckCircle2 className="w-4 h-4" />
+              <span>See Glowing 3D Rangoli on Street ➔</span>
             </button>
           </div>
         )}
@@ -295,4 +404,3 @@ export function StationModals({
     </div>
   );
 }
-

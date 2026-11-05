@@ -9,7 +9,7 @@ import { Sparkles, Calendar, Heart, MapPin, MessageSquareHeart, Check } from "lu
 export function RelationshipTimeline() {
   const { timeline } = useWonderland();
   const [selectedMilestone, setSelectedMilestone] = useState<MemoryMilestone>(timeline[1]); // default to 26 Sep
-  const [unlockedIds, setUnlockedIds] = useState<string[]>(["mem-1", "mem-2", "mem-3", "mem-4", "mem-5", "mem-6"]);
+  const [unlockedIds] = useState<string[]>(["mem-1", "mem-2", "mem-3", "mem-4", "mem-5", "mem-6"]);
 
   return (
     <div className="w-full min-h-[calc(100vh-60px)] pt-20 pb-20 px-4 max-w-6xl mx-auto flex flex-col items-center">
@@ -33,7 +33,7 @@ export function RelationshipTimeline() {
           {/* Connecting Golden Line */}
           <div className="absolute top-8 left-12 right-12 h-0.5 bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-600 opacity-50 z-0" />
 
-          {timeline.map((item, idx) => {
+          {timeline.map((item) => {
             const isSelected = selectedMilestone?.id === item.id;
             const isUnlocked = unlockedIds.includes(item.id);
             return (

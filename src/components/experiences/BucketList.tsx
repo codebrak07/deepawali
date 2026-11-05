@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useWonderland } from "@/context/WonderlandContext";
-import { Sparkles, CheckSquare, Square, Plus, Heart } from "lucide-react";
+import { Sparkles, CheckSquare, Square, Plus } from "lucide-react";
 import confetti from "canvas-confetti";
 
 export function BucketList() {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useWonderland } from "@/context/WonderlandContext";
-import { Sparkles, Compass, CheckCircle2, Heart, Award } from "lucide-react";
+import { Compass, CheckCircle2, Award } from "lucide-react";
 import confetti from "canvas-confetti";
 
 interface QuestClue {
