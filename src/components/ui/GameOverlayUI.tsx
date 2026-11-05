@@ -3,6 +3,7 @@
 import React from "react";
 import { CameraViewMode } from "@/components/world3d/LocalityScene";
 import { VirtualJoystick } from "./VirtualJoystick";
+import { MinimapUI } from "./MinimapUI";
 import { INTERACTIVE_STATIONS } from "@/components/world3d/LocalityData";
 import {
   Sparkles,
@@ -21,6 +22,7 @@ import {
   ZoomIn,
   ZoomOut,
   Mail,
+  DoorOpen,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -40,6 +42,12 @@ interface GameOverlayUIProps {
   onOpenSurprise: () => void;
   isExploreMode: boolean;
   onToggleMode: () => void;
+  // Live Minimap & Spatial Props
+  playerPos: { x: number; z: number };
+  playerHeading: number;
+  waypoint: { x: number; z: number } | null;
+  onSetWaypoint: (pos: { x: number; z: number } | null) => void;
+  isInsideBuilding?: boolean;
 }
 
 export function GameOverlayUI({
@@ -58,6 +66,11 @@ export function GameOverlayUI({
   onOpenSurprise,
   isExploreMode,
   onToggleMode,
+  playerPos,
+  playerHeading,
+  waypoint,
+  onSetWaypoint,
+  isInsideBuilding = false,
 }: GameOverlayUIProps) {
   const cameraPresets = [
     { id: "exploration", label: "Third Person", icon: Eye, tip: "Free Orbit Follow" },
@@ -76,88 +89,115 @@ export function GameOverlayUI({
   // Active contextual station info
   const activeStationInfo = INTERACTIVE_STATIONS.find((s) => s.id === nearbyStation);
 
+  // Contextual action button title
+  let actionTitle = activeStationInfo?.actionButton || "✨ EXPLORE ACTIVITY";
+  let actionIcon = Sparkles;
+  if (nearbyStation === "station-enter-home") {
+    actionTitle = "🚪 ENTER SANA'S HOME";
+    actionIcon = DoorOpen;
+  } else if (nearbyStation === "station-exit-home") {
+    actionTitle = "🚪 EXIT TO STREET";
+    actionIcon = DoorOpen;
+  }
+
+  const ActionIcon = actionIcon;
+
   return (
     <div className="fixed inset-0 pointer-events-none select-none z-30 flex flex-col justify-between p-2.5 sm:p-5">
       {/* ======================================================== */}
-      {/* TOP BAR: BRAND + MODE SWITCHER + AUDIO + SURPRISE */}
+      {/* TOP ROW: LIVE MINIMAP (TOP-LEFT) + BRAND & CONTROLS (TOP-RIGHT) */}
       {/* ======================================================== */}
-      <div className="flex items-center justify-between gap-2 pointer-events-auto">
-        {/* Brand / Locality Pill */}
-        <div className="flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-full bg-[#180a26]/85 backdrop-blur-md border border-amber-500/40 shadow-xl">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center">
-            <Heart className="w-3.5 h-3.5 text-white fill-current animate-pulse" />
-          </div>
-          <div>
-            <span className="text-xs sm:text-sm font-bold text-amber-100 flex items-center gap-1.5 leading-none">
-              <span>Sana&apos;s Open World</span>
-              <span className="text-[10px] text-amber-300 font-normal hidden sm:inline">
-                • Dattawadi, Akurdi (Pune)
-              </span>
-            </span>
-          </div>
+      <div className="w-full flex items-start justify-between gap-3 pointer-events-auto">
+        {/* TOP-LEFT: LIVE MINIMAP */}
+        <div className="flex flex-col items-start gap-1">
+          <MinimapUI
+            playerPos={playerPos}
+            playerHeading={playerHeading}
+            waypoint={waypoint}
+            onSetWaypoint={onSetWaypoint}
+            isInsideBuilding={isInsideBuilding}
+          />
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Mode Switcher: Storybook <-> Explore 3D */}
-          <button
-            onClick={onToggleMode}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
-              isExploreMode
-                ? "bg-amber-500 text-slate-950 border-amber-300 shadow-md shadow-amber-500/20"
-                : "bg-[#180a26]/85 text-amber-200 border-amber-500/40 hover:border-amber-300"
-            }`}
-          >
-            {isExploreMode ? (
-              <>
-                <BookOpen className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Storybook</span>
-                <span className="sm:hidden">Story</span>
-              </>
-            ) : (
-              <>
-                <Gamepad2 className="w-3.5 h-3.5" />
-                <span>Explore 3D</span>
-              </>
-            )}
-          </button>
+        {/* TOP-RIGHT: BRAND PILL + ACTION CONTROLS */}
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+          {/* Brand / Locality Pill */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#180a26]/85 backdrop-blur-md border border-amber-500/40 shadow-xl">
+            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center">
+              <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white fill-current animate-pulse" />
+            </div>
+            <div>
+              <span className="text-xs sm:text-sm font-bold text-amber-100 flex items-center gap-1.5 leading-none">
+                <span>{isInsideBuilding ? "Sana's Home Interior" : "Sana's Open World"}</span>
+                <span className="text-[10px] text-amber-300 font-normal hidden md:inline">
+                  • {isInsideBuilding ? "Living Room & Pooja Corner" : "Dattawadi, Akurdi (Pune)"}
+                </span>
+              </span>
+            </div>
+          </div>
 
-          {/* Sound Toggle */}
-          <button
-            onClick={onToggleSound}
-            aria-label={soundEnabled ? "Mute audio" : "Turn on festive sound"}
-            className={`p-2 rounded-full border transition-all cursor-pointer ${
-              soundEnabled
-                ? "bg-amber-500/30 text-amber-200 border-amber-400 shadow-md shadow-amber-500/20"
-                : "bg-[#180a26]/85 text-slate-400 border-slate-700 hover:text-white"
-            }`}
-            title="Atmospheric Diwali Audio"
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-4 h-4 text-amber-300 animate-pulse" />
-            ) : (
-              <VolumeX className="w-4 h-4" />
-            )}
-          </button>
+          {/* Action Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Mode Switcher: Storybook <-> Explore 3D */}
+            <button
+              onClick={onToggleMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                isExploreMode
+                  ? "bg-amber-500 text-slate-950 border-amber-300 shadow-md shadow-amber-500/20"
+                  : "bg-[#180a26]/85 text-amber-200 border-amber-500/40 hover:border-amber-300"
+              }`}
+            >
+              {isExploreMode ? (
+                <>
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Storybook</span>
+                  <span className="sm:hidden">Story</span>
+                </>
+              ) : (
+                <>
+                  <Gamepad2 className="w-3.5 h-3.5" />
+                  <span>Explore 3D</span>
+                </>
+              )}
+            </button>
 
-          {/* Secret Final Surprise Button */}
-          <button
-            onClick={onOpenSurprise}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-600 text-white border border-amber-300 text-xs font-bold shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
-            <span className="hidden sm:inline">Surprise</span>
-            <span className="sm:hidden">🎁</span>
-          </button>
+            {/* Sound Toggle */}
+            <button
+              onClick={onToggleSound}
+              aria-label={soundEnabled ? "Mute audio" : "Turn on festive sound"}
+              className={`p-2 rounded-full border transition-all cursor-pointer ${
+                soundEnabled
+                  ? "bg-amber-500/30 text-amber-200 border-amber-400 shadow-md shadow-amber-500/20"
+                  : "bg-[#180a26]/85 text-slate-400 border-slate-700 hover:text-white"
+              }`}
+              title="Atmospheric Diwali Audio"
+            >
+              {soundEnabled ? (
+                <Volume2 className="w-4 h-4 text-amber-300 animate-pulse" />
+              ) : (
+                <VolumeX className="w-4 h-4" />
+              )}
+            </button>
 
-          {/* Admin console link */}
-          <Link
-            href="/admin"
-            className="px-2.5 py-1.5 rounded-full bg-[#180a26]/85 text-slate-400 border border-slate-700 hover:text-amber-300 text-xs transition-colors"
-            title="Admin Console"
-          >
-            Admin
-          </Link>
+            {/* Secret Final Surprise Button */}
+            <button
+              onClick={onOpenSurprise}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-600 text-white border border-amber-300 text-xs font-bold shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
+              <span className="hidden sm:inline">Surprise</span>
+              <span className="sm:hidden">🎁</span>
+            </button>
+
+            {/* Admin console link */}
+            <Link
+              href="/admin"
+              className="px-2.5 py-1.5 rounded-full bg-[#180a26]/85 text-slate-400 border border-slate-700 hover:text-amber-300 text-xs transition-colors"
+              title="Admin Console"
+            >
+              Admin
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -170,8 +210,8 @@ export function GameOverlayUI({
             onClick={() => onInteractStation(nearbyStation)}
             className="group px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-sm sm:text-base tracking-wider uppercase shadow-[0_0_40px_rgba(245,158,11,0.95)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 border-2 border-white cursor-pointer"
           >
-            <Sparkles className="w-5 h-5 text-slate-950 animate-spin" style={{ animationDuration: "4s" }} />
-            <span>{activeStationInfo?.actionButton || "✨ EXPLORE ACTIVITY"}</span>
+            <ActionIcon className="w-5 h-5 text-slate-950 animate-pulse" />
+            <span>{actionTitle}</span>
           </button>
         </div>
       )}
@@ -250,7 +290,7 @@ export function GameOverlayUI({
               {/* Desktop hint */}
               <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#150a24]/85 border border-slate-800 text-slate-300 text-xs">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <span>WASD: Move • Mouse Drag: Rotate Camera • Wheel: Zoom • Click: Interact</span>
+                <span>WASD: Move • Mouse Drag: Look Orbit • Tap Minimap: Set Waypoint</span>
               </div>
 
               {/* Fast Travel Shortcuts */}

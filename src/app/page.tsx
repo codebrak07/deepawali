@@ -22,6 +22,12 @@ export default function Page() {
   const [nearbyStation, setNearbyStation] = useState<string | null>(null);
   const [activeModalStation, setActiveModalStation] = useState<string | null>(null);
 
+  // Live Minimap & Spatial State
+  const [playerPos, setPlayerPos] = useState<{ x: number; z: number }>({ x: 0, z: 4 });
+  const [playerHeading, setPlayerHeading] = useState<number>(0);
+  const [waypoint, setWaypoint] = useState<{ x: number; z: number } | null>(null);
+  const [isInsideBuilding, setIsInsideBuilding] = useState<boolean>(false);
+
   // Initialize 3D Engine on mount
   useEffect(() => {
     if (!containerRef.current) return;
@@ -31,6 +37,16 @@ export default function Page() {
 
     engine.onProximityChange = (stationId) => {
       setNearbyStation(stationId);
+    };
+
+    engine.onPlayerTransformChange = (pos, heading) => {
+      setPlayerPos(pos);
+      setPlayerHeading(heading);
+      setIsInsideBuilding(engine.isInsideBuilding);
+    };
+
+    engine.onWaypointChange = (wp) => {
+      setWaypoint(wp);
     };
 
     engine.start();
@@ -58,9 +74,19 @@ export default function Page() {
       keysPressed.add(e.code);
       updateInputFromKeys();
 
-      // [E] or Space to interact with nearby station
-      if (e.code === "KeyE" && engine.nearbyStation) {
-        setActiveModalStation(engine.nearbyStation);
+      // Contextual interaction key
+      if ((e.code === "KeyE" || e.code === "Space") && engine.nearbyStation) {
+        if (engine.nearbyStation === "station-enter-home") {
+          engine.enterBuilding();
+          setIsInsideBuilding(true);
+        } else if (engine.nearbyStation === "station-exit-home") {
+          engine.exitBuilding();
+          setIsInsideBuilding(false);
+        } else if (engine.nearbyStation === "station-surprise") {
+          setShowFinalSurprise(true);
+        } else {
+          setActiveModalStation(engine.nearbyStation);
+        }
       }
     };
 
@@ -78,7 +104,7 @@ export default function Page() {
       engine.dispose();
       engineRef.current = null;
     };
-  }, []);
+  }, [setShowFinalSurprise]);
 
   // Handle switching between Story Mode and Explore 3D Mode
   const handleToggleMode = () => {
@@ -148,10 +174,31 @@ export default function Page() {
   };
 
   const handleInteractStation = (stId: string) => {
+    if (stId === "station-enter-home") {
+      engineRef.current?.enterBuilding();
+      setIsInsideBuilding(true);
+      return;
+    }
+    if (stId === "station-exit-home") {
+      engineRef.current?.exitBuilding();
+      setIsInsideBuilding(false);
+      return;
+    }
     if (stId === "station-surprise") {
       setShowFinalSurprise(true);
     } else {
       setActiveModalStation(stId);
+    }
+  };
+
+  const handleSetWaypoint = (wp: { x: number; z: number } | null) => {
+    setWaypoint(wp);
+    if (engineRef.current) {
+      if (wp) {
+        engineRef.current.setWaypoint(wp.x, wp.z);
+      } else {
+        engineRef.current.setWaypoint(null);
+      }
     }
   };
 
@@ -210,6 +257,11 @@ export default function Page() {
           onOpenSurprise={() => setShowFinalSurprise(true)}
           isExploreMode={isExploreMode}
           onToggleMode={handleToggleMode}
+          playerPos={playerPos}
+          playerHeading={playerHeading}
+          waypoint={waypoint}
+          onSetWaypoint={handleSetWaypoint}
+          isInsideBuilding={isInsideBuilding}
         />
       )}
 

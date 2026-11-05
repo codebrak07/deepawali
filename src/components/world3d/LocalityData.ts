@@ -27,6 +27,7 @@ export interface BuildingPlot {
   floors: number;
   hasBalcony: boolean;
   hasToran: boolean;
+  isEnterable?: boolean;
 }
 
 export interface StationLocation {
@@ -65,6 +66,25 @@ export const LOCALITY_ROADS: RoadSegment[] = [
 ];
 
 export const LOCALITY_BUILDINGS: BuildingPlot[] = [
+  // Landmark: Sana & Aalekh's Diwali Home (Enterable Residential Suite)
+  {
+    id: "b-sana-home",
+    name: "Sana & Aalekh's Diwali Home",
+    type: "residential",
+    x: -16,
+    z: -14,
+    width: 12,
+    depth: 10,
+    height: 8,
+    rotation: 0,
+    color: "#F43F5E", // Warm festive rose-coral
+    accentColor: "#FDE047",
+    floors: 2,
+    hasBalcony: true,
+    hasToran: true,
+    isEnterable: true,
+  },
+
   // Landmark 1: Sai Hospital / Gangai Chambers (Corner of Main Rd & South Lane)
   {
     id: "b-sai-hospital",
@@ -338,6 +358,26 @@ export const INTERACTIVE_STATIONS: StationLocation[] = [
     label: "TEMPLE BLESSING & GIFT ✨",
     actionButton: "🎁 OPEN SURPRISE",
     description: "A secret celebration with music, sweet memories, and heartfelt promises for Shirjana.",
+  },
+  {
+    id: "station-enter-home",
+    name: "Sana & Aalekh's Home",
+    type: "landmark",
+    x: -16,
+    z: -8.8,
+    label: "ENTER SANA'S HOME 🚪",
+    actionButton: "🚪 ENTER SANA'S HOME",
+    description: "A warm, furnished Indian apartment decorated for Diwali with sofa, TV memories, bedroom, and puja diyas.",
+  },
+  {
+    id: "station-exit-home",
+    name: "Apartment Entrance Door",
+    type: "landmark",
+    x: -16,
+    z: -9.8,
+    label: "EXIT TO STREET 🚪",
+    actionButton: "🚪 EXIT TO STREET",
+    description: "Step outside to Dattawadi Main Road and Hanuman Mandir Chowk.",
   },
 ];
 
