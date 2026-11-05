@@ -25,11 +25,18 @@ export class LocalitySceneEngine {
   public charPos = new THREE.Vector3(0, 0, 4); // Start near Station A & Chowk
   public charRotation = 0;
   public moveVector = new THREE.Vector2(0, 0); // Normalized movement input
+  public lookVector = new THREE.Vector2(0, 0); // Normalized camera look input from Right Joystick
   public isWalking = false;
   private targetDestination: THREE.Vector3 | null = null;
 
-  // Camera Rig & State
+  // Camera Orbit Rig & State
   public cameraMode: CameraViewMode = "story"; // Default to cinematic story framing
+  public orbitYaw = 0; // Horizontal orbit around character (radians)
+  public orbitPitch = 0.32; // Vertical orbit inclination (radians)
+  public orbitDistance = 9.5; // Distance from character (meters)
+  public orbitSensitivity = 1.0;
+  public invertPitch = false;
+
   private targetCameraPos = new THREE.Vector3(-12, 16, 28);
   private targetLookAt = new THREE.Vector3(0, 2, 0);
   private currentCameraPos = new THREE.Vector3(-12, 16, 28);
@@ -126,7 +133,7 @@ export class LocalitySceneEngine {
 
     // 5. Event Listeners
     window.addEventListener("resize", this.handleResize);
-    this.setupFloorRaycaster();
+    this.setupInputListeners();
   }
 
   private handleResize = () => {
@@ -138,33 +145,89 @@ export class LocalitySceneEngine {
     this.renderer.setSize(width, height);
   };
 
-  private setupFloorRaycaster() {
+  private setupInputListeners() {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
+    let isPointerDown = false;
+    let startX = 0;
+    let startY = 0;
+    let hasDragged = false;
+
     this.container.addEventListener("pointerdown", (e) => {
       if ((e.target as HTMLElement).tagName !== "CANVAS") return;
-      if (this.cameraMode === "story") return; // In story mode, canvas clicks don't move character
+      isPointerDown = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      hasDragged = false;
+    });
 
-      const rect = this.container.getBoundingClientRect();
-      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    window.addEventListener("pointermove", (e) => {
+      if (!isPointerDown) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
 
-      raycaster.setFromCamera(mouse, this.camera);
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      const intersection = new THREE.Vector3();
-      if (raycaster.ray.intersectPlane(plane, intersection)) {
-        this.targetDestination = new THREE.Vector3(
-          Math.max(-50, Math.min(50, intersection.x)),
-          0,
-          Math.max(-45, Math.min(40, intersection.z))
+      if (!hasDragged && Math.hypot(dx, dy) > 6) {
+        hasDragged = true;
+      }
+
+      if (hasDragged && this.cameraMode !== "story") {
+        this.adjustCameraOrbit(
+          -e.movementX * 0.007 * this.orbitSensitivity,
+          (this.invertPitch ? -1 : 1) * -e.movementY * 0.006 * this.orbitSensitivity
         );
       }
     });
+
+    window.addEventListener("pointerup", (e) => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+
+      // If it was a clean tap without dragging, navigate to the clicked floor spot!
+      if (!hasDragged && (e.target as HTMLElement).tagName === "CANVAS" && this.cameraMode !== "story") {
+        const rect = this.container.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, this.camera);
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const intersection = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(plane, intersection)) {
+          this.navigateTo(
+            Math.max(-65, Math.min(65, intersection.x)),
+            Math.max(-55, Math.min(50, intersection.z))
+          );
+        }
+      }
+    });
+
+    // Mouse wheel zoom
+    this.container.addEventListener(
+      "wheel",
+      (e) => {
+        if (this.cameraMode !== "story") {
+          this.adjustZoom(e.deltaY * 0.015);
+        }
+      },
+      { passive: true }
+    );
   }
 
   public setCameraMode(mode: CameraViewMode) {
     this.cameraMode = mode;
+    if (mode === "closeup") {
+      this.orbitDistance = 3.8;
+      this.orbitPitch = 0.18;
+    } else if (mode === "street") {
+      this.orbitDistance = 7.0;
+      this.orbitPitch = 0.12;
+    } else if (mode === "birdeye") {
+      this.orbitDistance = 38.0;
+      this.orbitPitch = 1.15;
+    } else if (mode === "exploration") {
+      this.orbitDistance = 9.5;
+      this.orbitPitch = 0.32;
+    }
   }
 
   public setInputVector(x: number, y: number) {
@@ -172,6 +235,33 @@ export class LocalitySceneEngine {
     if (this.moveVector.lengthSq() > 0.01) {
       this.targetDestination = null;
     }
+  }
+
+  public setLookVector(x: number, y: number) {
+    this.lookVector.set(x, y);
+  }
+
+  public adjustCameraOrbit(deltaYaw: number, deltaPitch: number) {
+    this.orbitYaw = (this.orbitYaw + deltaYaw) % (Math.PI * 2);
+    this.orbitPitch = Math.max(0.08, Math.min(1.18, this.orbitPitch + deltaPitch));
+  }
+
+  public adjustZoom(delta: number) {
+    this.orbitDistance = Math.max(3.2, Math.min(26.0, this.orbitDistance + delta));
+  }
+
+  public resetCamera() {
+    this.orbitYaw = 0;
+    this.orbitPitch = 0.32;
+    this.orbitDistance = 9.5;
+  }
+
+  public setCameraSensitivity(sens: number) {
+    this.orbitSensitivity = Math.max(0.2, Math.min(3.0, sens));
+  }
+
+  public setInvertPitch(invert: boolean) {
+    this.invertPitch = invert;
   }
 
   public navigateTo(x: number, z: number) {
@@ -219,16 +309,33 @@ export class LocalitySceneEngine {
   };
 
   private updateCharacterPhysics(delta: number, time: number) {
-    const moveSpeed = 6.5;
+    const moveSpeed = 7.0;
     let dx = 0;
     let dz = 0;
 
     if (this.cameraMode !== "story") {
       if (this.moveVector.lengthSq() > 0.01) {
-        dx = this.moveVector.x * moveSpeed * delta;
-        dz = this.moveVector.y * moveSpeed * delta;
-        this.isWalking = true;
-        this.charRotation = Math.atan2(dx, dz);
+        // Camera-relative forward & right vectors on the ground plane (X-Z)
+        const forwardX = -Math.sin(this.orbitYaw);
+        const forwardZ = -Math.cos(this.orbitYaw);
+
+        const rightX = -forwardZ;
+        const rightZ = forwardX;
+
+        // Joystick deflection: -Y is forward (push up), +X is strafe right
+        const forwardInput = -this.moveVector.y;
+        const rightInput = this.moveVector.x;
+
+        const moveDirX = forwardX * forwardInput + rightX * rightInput;
+        const moveDirZ = forwardZ * forwardInput + rightZ * rightInput;
+        const len = Math.hypot(moveDirX, moveDirZ);
+
+        if (len > 0.01) {
+          dx = (moveDirX / len) * moveSpeed * delta;
+          dz = (moveDirZ / len) * moveSpeed * delta;
+          this.isWalking = true;
+          this.charRotation = Math.atan2(moveDirX, moveDirZ);
+        }
       } else if (this.targetDestination) {
         const toTarget = this.tempToTarget.subVectors(this.targetDestination, this.charPos);
         toTarget.y = 0;
@@ -251,8 +358,9 @@ export class LocalitySceneEngine {
       this.isWalking = false;
     }
 
-    this.charPos.x = Math.max(-52, Math.min(52, this.charPos.x + dx));
-    this.charPos.z = Math.max(-48, Math.min(42, this.charPos.z + dz));
+    // Free-roam continuous boundary bounds
+    this.charPos.x = Math.max(-65, Math.min(65, this.charPos.x + dx));
+    this.charPos.z = Math.max(-55, Math.min(50, this.charPos.z + dz));
 
     this.aalekh.root.position.set(this.charPos.x, 0, this.charPos.z);
     this.aalekh.root.rotation.y = this.charRotation;
@@ -274,7 +382,18 @@ export class LocalitySceneEngine {
   }
 
   private updateCameraSystem(delta: number, time: number) {
-    const lerpFactor = Math.min(delta * 4.2, 1.0);
+    // Process Right Joystick camera look / orbit
+    if (this.cameraMode !== "story" && this.lookVector.lengthSq() > 0.01) {
+      const lookSpeed = 2.4 * this.orbitSensitivity;
+      this.orbitYaw -= this.lookVector.x * lookSpeed * delta;
+      const pitchFactor = this.invertPitch ? 1 : -1;
+      this.orbitPitch = Math.max(
+        0.08,
+        Math.min(1.18, this.orbitPitch + this.lookVector.y * pitchFactor * lookSpeed * delta)
+      );
+    }
+
+    const lerpFactor = Math.min(delta * 5.0, 1.0);
 
     if (this.cameraMode === "story") {
       // Cinematic slow sweeping view across the illuminated Dattawadi neighbourhood
@@ -283,27 +402,60 @@ export class LocalitySceneEngine {
       this.targetCameraPos.set(sweepX, 15, sweepZ);
       this.targetLookAt.set(0, 2.5, 0);
     } else if (this.cameraMode === "exploration") {
-      const camDist = 9.5;
-      const camHeight = 5.2;
+      const cosPitch = Math.cos(this.orbitPitch);
+      const sinPitch = Math.sin(this.orbitPitch);
+      const sinYaw = Math.sin(this.orbitYaw);
+      const cosYaw = Math.cos(this.orbitYaw);
+
+      const offsetX = sinYaw * cosPitch * this.orbitDistance;
+      const offsetY = Math.max(1.6, sinPitch * this.orbitDistance + 1.4);
+      const offsetZ = cosYaw * cosPitch * this.orbitDistance;
+
       this.targetCameraPos.set(
-        this.charPos.x - Math.sin(this.charRotation) * camDist * 0.5,
-        camHeight,
-        this.charPos.z + camDist * 0.85
+        this.charPos.x + offsetX,
+        offsetY,
+        this.charPos.z + offsetZ
       );
       this.targetLookAt.set(this.charPos.x, 1.6, this.charPos.z);
     } else if (this.cameraMode === "closeup") {
+      const cosPitch = Math.cos(this.orbitPitch);
+      const sinPitch = Math.sin(this.orbitPitch);
+      const sinYaw = Math.sin(this.orbitYaw);
+      const cosYaw = Math.cos(this.orbitYaw);
+      const dist = Math.min(this.orbitDistance, 4.5);
+
       this.targetCameraPos.set(
-        this.charPos.x + 0.5,
-        1.7,
-        this.charPos.z + 3.2
+        this.charPos.x + sinYaw * cosPitch * dist,
+        Math.max(1.5, sinPitch * dist + 1.2),
+        this.charPos.z + cosYaw * cosPitch * dist
       );
-      this.targetLookAt.set(this.charPos.x + 0.6, 1.6, this.charPos.z);
+      this.targetLookAt.set(this.charPos.x, 1.5, this.charPos.z);
     } else if (this.cameraMode === "street") {
-      this.targetCameraPos.set(this.charPos.x - 6, 1.3, this.charPos.z + 4);
-      this.targetLookAt.set(this.charPos.x + 10, 2.6, this.charPos.z - 5);
+      const cosPitch = Math.cos(this.orbitPitch);
+      const sinPitch = Math.sin(this.orbitPitch);
+      const sinYaw = Math.sin(this.orbitYaw);
+      const cosYaw = Math.cos(this.orbitYaw);
+      const dist = Math.min(this.orbitDistance, 7.5);
+
+      this.targetCameraPos.set(
+        this.charPos.x + sinYaw * cosPitch * dist,
+        Math.max(1.3, sinPitch * dist + 1.0),
+        this.charPos.z + cosYaw * cosPitch * dist
+      );
+      this.targetLookAt.set(this.charPos.x, 1.4, this.charPos.z);
     } else if (this.cameraMode === "birdeye") {
-      this.targetCameraPos.set(0, 48, 25);
-      this.targetLookAt.set(0, 0, 0);
+      const cosPitch = Math.cos(this.orbitPitch);
+      const sinPitch = Math.sin(this.orbitPitch);
+      const sinYaw = Math.sin(this.orbitYaw);
+      const cosYaw = Math.cos(this.orbitYaw);
+      const dist = Math.max(this.orbitDistance, 32.0);
+
+      this.targetCameraPos.set(
+        this.charPos.x + sinYaw * cosPitch * dist,
+        Math.max(26.0, sinPitch * dist),
+        this.charPos.z + cosYaw * cosPitch * dist
+      );
+      this.targetLookAt.set(this.charPos.x, 0, this.charPos.z);
     } else if (this.cameraMode === "lanternsky") {
       const lanternPos = this.stations.stationC_LanternMesh.position;
       this.targetCameraPos.set(lanternPos.x - 8, Math.max(lanternPos.y - 2, 4), lanternPos.z + 10);

@@ -33,10 +33,10 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
   const fairyColors = [0xf59e0b, 0xec4899, 0x10b981, 0x06b6d4, 0xf43f5e, 0xfef08a];
   const sharedFairyMats = fairyColors.map((c) => new THREE.MeshBasicMaterial({ color: c }));
 
-  const sharedPoleGeo = new THREE.CylinderGeometry(0.12, 0.16, 4.2, 6);
-  const sharedBaseGeo = new THREE.CylinderGeometry(0.3, 0.35, 0.5, 6);
-  const sharedHousingGeo = new THREE.CylinderGeometry(0.32, 0.22, 0.65, 6);
-  const sharedCapGeo = new THREE.ConeGeometry(0.42, 0.35, 6);
+  const sharedPoleGeo = new THREE.CylinderGeometry(0.09, 0.12, 3.8, 6);
+  const sharedBaseGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.4, 6);
+  const sharedHousingGeo = new THREE.CylinderGeometry(0.24, 0.18, 0.5, 6);
+  const sharedCapGeo = new THREE.ConeGeometry(0.32, 0.25, 6);
   const sharedDiyaBowlGeo = new THREE.CylinderGeometry(0.35, 0.15, 0.18, 8);
   const sharedDiyaFlameGeo = new THREE.ConeGeometry(0.12, 0.35, 6);
   const sharedBulbGeo = new THREE.SphereGeometry(0.11, 4, 4);
@@ -93,24 +93,25 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
 
   // 2. Ornate Indian Street Lamps along Dattawadi Main Road and Hanuman Chowk
   const streetLampPositions = [
-    { x: -30, z: 4.8 },
-    { x: -16, z: 4.8 },
-    { x: 0, z: 4.8 },
-    { x: 16, z: 4.8 },
-    { x: 30, z: 4.8 },
-    { x: 44, z: 4.8 },
+    { x: -32, z: 5.6 },
+    { x: -18, z: 5.6 },
+    { x: -8, z: 5.6 },
+    { x: 8, z: 5.6 },
+    { x: 20, z: 5.6 },
+    { x: 34, z: 5.6 },
+    { x: 48, z: 5.6 },
 
-    { x: -30, z: -4.8 },
-    { x: -16, z: -4.8 },
-    { x: 16, z: -4.8 },
-    { x: 30, z: -4.8 },
-    { x: 44, z: -4.8 },
+    { x: -32, z: -5.6 },
+    { x: -18, z: -5.6 },
+    { x: 18, z: -5.6 },
+    { x: 34, z: -5.6 },
+    { x: 48, z: -5.6 },
 
     // Hanuman Mandir lane
-    { x: 4.0, z: -15 },
-    { x: 4.0, z: -32 },
-    { x: -4.0, z: -15 },
-    { x: -4.0, z: -32 },
+    { x: 4.8, z: -15 },
+    { x: 4.8, z: -32 },
+    { x: -4.8, z: -15 },
+    { x: -4.8, z: -32 },
   ];
 
   streetLampPositions.forEach((pos) => {

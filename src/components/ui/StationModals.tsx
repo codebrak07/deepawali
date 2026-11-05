@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, Heart, X, Send, Palette, Flame, CheckCircle2 } from "lucide-react";
+import { Sparkles, Heart, X, Send, Palette, Flame, CheckCircle2, Mail } from "lucide-react";
 import { soundManager } from "@/components/audio/SoundManager";
 import confetti from "canvas-confetti";
 
@@ -398,6 +398,49 @@ export function StationModals({
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* STATION: SANA'S LOVE LETTER (station-letters) */}
+        {/* ======================================================== */}
+        {stationId === "station-letters" && (
+          <div>
+            <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-400/50 flex items-center justify-center mx-auto mb-3 text-rose-400">
+              <Mail className="w-6 h-6 animate-pulse" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-400/30 text-rose-300 text-xs font-semibold mb-2">
+              <Heart className="w-3.5 h-3.5 fill-current" />
+              <span>Gangai Chambers Verandah</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-amber-100 mb-2">
+              A Letter Written For Shirjana ❤️
+            </h3>
+            <p className="text-xs text-amber-200/70 mb-5">
+              From our midnight conversations to this Diwali wonderland.
+            </p>
+
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#1b0c26]/90 border border-rose-500/30 text-rose-100 text-xs sm:text-sm leading-relaxed font-serif text-left shadow-inner mb-5">
+              <p className="font-bold text-amber-300 text-sm mb-3">Dearest Sana,</p>
+              <p className="mb-3">
+                Every corner of this little 3D world was built with you in mind. From the moment we made it official at 1:32 AM on 26 September, to holding your hand and our first kiss under the cinema lights on 4 October, you turned ordinary days into pure magic.
+              </p>
+              <p className="mb-4">
+                No matter how many festive lanterns fill the night sky, none of them shine brighter than your smile. Happy Diwali, my heart.
+              </p>
+              <p className="font-bold text-amber-300 text-right italic font-serif">
+                Forever yours,<br />Aalekh ❤️
+              </p>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold text-xs sm:text-sm tracking-wide shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              Close & Keep Exploring 🌸
+            </button>
           </div>
         )}
       </div>

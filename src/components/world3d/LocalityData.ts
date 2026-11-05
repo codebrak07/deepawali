@@ -36,6 +36,7 @@ export interface StationLocation {
   x: number;
   z: number;
   label: string;
+  actionButton: string;
   description: string;
 }
 
@@ -43,18 +44,24 @@ export interface StationLocation {
 // Origin (0, 0) = Central Dattawadi Chowk near Sai Hospital & Hanuman Mandir lane
 export const LOCALITY_ROADS: RoadSegment[] = [
   // Dattawadi Main Road (East - West corridor)
-  { id: "r-main-w", name: "Dattawadi Main Rd (West)", startX: -60, startZ: 0, endX: 0, endZ: 0, width: 8 },
-  { id: "r-main-e", name: "Dattawadi Main Rd (East)", startX: 0, startZ: 0, endX: 60, endZ: 0, width: 8 },
+  { id: "r-main-w", name: "Dattawadi Main Rd (West)", startX: -65, startZ: 0, endX: 0, endZ: 0, width: 8.5 },
+  { id: "r-main-e", name: "Dattawadi Main Rd (East)", startX: 0, startZ: 0, endX: 65, endZ: 0, width: 8.5 },
 
   // Hanuman Mandir Chowk & Lane (North toward Sector 27A / Hanuman Colony)
-  { id: "r-north", name: "Hanuman Mandir Lane", startX: 0, startZ: 0, endX: 0, endZ: -55, width: 6.5 },
+  { id: "r-north", name: "Hanuman Mandir Lane", startX: 0, startZ: 0, endX: 0, endZ: -55, width: 7 },
 
   // Station Link Lane (South toward Akurdi railway corridor)
-  { id: "r-south", name: "Akurdi Station Link Rd", startX: 0, startZ: 0, endX: 0, endZ: 50, width: 6.5 },
+  { id: "r-south", name: "Akurdi Station Link Rd", startX: 0, startZ: 0, endX: 0, endZ: 50, width: 7 },
 
   // Secondary residential pocket lanes (East Dattawadi alley)
-  { id: "r-alley-ne", name: "Ganga Nagar Residential Alley", startX: 25, startZ: 0, endX: 25, endZ: -35, width: 4.5 },
-  { id: "r-alley-sw", name: "Kalbhor Building Alley", startX: -28, startZ: 0, endX: -28, endZ: 35, width: 4.5 },
+  { id: "r-alley-ne", name: "Ganga Nagar Residential Alley", startX: 25, startZ: 0, endX: 25, endZ: -45, width: 5 },
+  { id: "r-alley-sw", name: "Kalbhor Building Alley", startX: -28, startZ: 0, endX: -28, endZ: 40, width: 5 },
+
+  // Continuous Cross Connecting Lanes for Free-Roam Exploration
+  { id: "r-cross-n", name: "Hanuman Colony Cross Lane", startX: -35, startZ: -45, endX: 35, endZ: -45, width: 5.5 },
+  { id: "r-cross-s", name: "Dattawadi South Cross Lane", startX: -35, startZ: 40, endX: 35, endZ: 40, width: 5.5 },
+  { id: "r-conn-w", name: "West Residential Byway", startX: -35, startZ: -45, endX: -35, endZ: 40, width: 4.5 },
+  { id: "r-conn-e", name: "East Ganga Nagar Byway", startX: 35, startZ: -45, endX: 35, endZ: 40, width: 4.5 },
 ];
 
 export const LOCALITY_BUILDINGS: BuildingPlot[] = [
@@ -288,7 +295,8 @@ export const INTERACTIVE_STATIONS: StationLocation[] = [
     type: "diya",
     x: 0,
     z: 8,
-    label: "STATION A: LIGHT THE DIYAS 🪔",
+    label: "LIGHT THE DIYAS 🪔",
+    actionButton: "🪔 LIGHT DIYA",
     description: "Light the row of terracotta diyas along Dattawadi Main Road to spread golden festive light and reveal cherished memories.",
   },
   {
@@ -297,7 +305,8 @@ export const INTERACTIVE_STATIONS: StationLocation[] = [
     type: "rangoli",
     x: 0,
     z: -24,
-    label: "STATION B: DRAW THE RANGOLI 🎨",
+    label: "DRAW THE RANGOLI 🎨",
+    actionButton: "🎨 CREATE RANGOLI",
     description: "In the Hanuman Mandir Chowk, hold or drag to pour turmeric and vermilion powders into an intricate street mandala.",
   },
   {
@@ -306,8 +315,29 @@ export const INTERACTIVE_STATIONS: StationLocation[] = [
     type: "lantern",
     x: 30,
     z: 0,
-    label: "STATION C: RELEASE THE LANTERN 🏮",
+    label: "RELEASE THE LANTERN 🏮",
+    actionButton: "🏮 RELEASE LANTERN",
     description: "Type a personal wish and launch a glowing 3D star lantern into the midnight sky above Akurdi.",
+  },
+  {
+    id: "station-letters",
+    name: "Sana's Love Letter Box",
+    type: "landmark",
+    x: -16,
+    z: 0,
+    label: "READ LOVE LETTER 💌",
+    actionButton: "💌 READ LETTER",
+    description: "Personal letters written with love from Aalekh to Sana, capturing every memory from 11 September to Diwali.",
+  },
+  {
+    id: "station-surprise",
+    name: "Temple Blessing & Gift",
+    type: "landmark",
+    x: -12,
+    z: -32,
+    label: "TEMPLE BLESSING & GIFT ✨",
+    actionButton: "🎁 OPEN SURPRISE",
+    description: "A secret celebration with music, sweet memories, and heartfelt promises for Shirjana.",
   },
 ];
 

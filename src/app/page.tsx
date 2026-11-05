@@ -117,9 +117,41 @@ export default function Page() {
     }
   };
 
+  const handleLookJoystickMove = (x: number, y: number) => {
+    if (engineRef.current) {
+      engineRef.current.setLookVector(x, y);
+    }
+  };
+
+  const handleResetCamera = () => {
+    if (engineRef.current) {
+      engineRef.current.resetCamera();
+    }
+  };
+
+  const handleZoomIn = () => {
+    if (engineRef.current) {
+      engineRef.current.adjustZoom(-2.5);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (engineRef.current) {
+      engineRef.current.adjustZoom(2.5);
+    }
+  };
+
   const handleTeleport = (x: number, z: number) => {
     if (engineRef.current) {
       engineRef.current.navigateTo(x, z);
+    }
+  };
+
+  const handleInteractStation = (stId: string) => {
+    if (stId === "station-surprise") {
+      setShowFinalSurprise(true);
+    } else {
+      setActiveModalStation(stId);
     }
   };
 
@@ -168,9 +200,13 @@ export default function Page() {
           soundEnabled={soundEnabled}
           onToggleSound={toggleSound}
           nearbyStation={nearbyStation}
-          onInteractStation={(stId) => setActiveModalStation(stId)}
+          onInteractStation={handleInteractStation}
           onTeleport={handleTeleport}
           onJoystickMove={handleJoystickMove}
+          onLookJoystickMove={handleLookJoystickMove}
+          onResetCamera={handleResetCamera}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           onOpenSurprise={() => setShowFinalSurprise(true)}
           isExploreMode={isExploreMode}
           onToggleMode={handleToggleMode}

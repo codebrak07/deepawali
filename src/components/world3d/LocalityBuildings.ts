@@ -16,10 +16,19 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
   const marigoldMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xd97706, emissiveIntensity: 0.6 });
   const waterTankMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
   const streamerMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
+  const potMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.8 });
+  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
+  const diyaClayMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.7 });
+  const diyaFlameMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+  const cyanMedicalMat = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    emissive: 0x0284c7,
+    emissiveIntensity: 1.2,
+  });
   const lanternMat = new THREE.MeshStandardMaterial({
     color: 0xf59e0b,
     emissive: 0xf97316,
-    emissiveIntensity: 0.9,
+    emissiveIntensity: 1.2,
   });
 
   // Reusable Window Materials for each emission color (zero per-window allocations)
@@ -49,6 +58,10 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
   const sharedBulbGeo = new THREE.SphereGeometry(0.09, 4, 4);
   const sharedOctaGeo = new THREE.OctahedronGeometry(0.42, 0);
   const sharedStreamerGeo = new THREE.ConeGeometry(0.08, 0.6, 4);
+  const sharedPotGeo = new THREE.CylinderGeometry(0.25, 0.18, 0.45, 6);
+  const sharedFoliageGeo = new THREE.SphereGeometry(0.32, 6, 6);
+  const sharedDiyaGeo = new THREE.CylinderGeometry(0.2, 0.1, 0.1, 6);
+  const sharedFlameGeo = new THREE.ConeGeometry(0.08, 0.22, 5);
 
   LOCALITY_BUILDINGS.forEach((plot: BuildingPlot, bIdx: number) => {
     const bldgGroup = new THREE.Group();
@@ -214,7 +227,7 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
       }
     }
 
-    // 8. Ground Floor Entrance Doorway & Festive Lantern
+    // 8. Ground Floor Entrance Doorway & Festive Details
     const doorMesh = new THREE.Mesh(sharedDoorGeo, doorWoodMat);
     doorMesh.position.set(0, plinthHeight + 1.15, plot.depth / 2 + 0.03);
     bldgGroup.add(doorMesh);
@@ -227,6 +240,42 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
     sconceMesh.position.set(0, plinthHeight + 2.5, plot.depth / 2 + 0.2);
     sconceMesh.scale.set(1.8, 1.8, 1.8);
     bldgGroup.add(sconceMesh);
+
+    // Threshold Entrance Clay Diyas
+    [-1.5, 1.5].forEach((dx) => {
+      const diya = new THREE.Mesh(sharedDiyaGeo, diyaClayMat);
+      diya.position.set(dx, 0.15, plot.depth / 2 + 0.55);
+      bldgGroup.add(diya);
+      const flame = new THREE.Mesh(sharedFlameGeo, diyaFlameMat);
+      flame.position.set(dx, 0.25, plot.depth / 2 + 0.55);
+      bldgGroup.add(flame);
+    });
+
+    // Decorative Plinth Flower Planters
+    [-plot.width * 0.42, plot.width * 0.42].forEach((px) => {
+      const pot = new THREE.Mesh(sharedPotGeo, potMat);
+      pot.position.set(px, plinthHeight + 0.22, plot.depth / 2 + 0.25);
+      bldgGroup.add(pot);
+      const foliage = new THREE.Mesh(sharedFoliageGeo, foliageMat);
+      foliage.position.set(px, plinthHeight + 0.48, plot.depth / 2 + 0.25);
+      bldgGroup.add(foliage);
+    });
+
+    // Side Windows (finished architecture visible from courtyards & alleys)
+    for (let f = 0; f < plot.floors; f++) {
+      const floorY = plinthHeight + (f + 0.55) * floorHeight;
+      const sideMat = sharedWindowMats[(bIdx + f + 2) % sharedWindowMats.length];
+
+      const leftWin = new THREE.Mesh(sharedWinGeo, sideMat);
+      leftWin.rotation.y = -Math.PI / 2;
+      leftWin.position.set(-plot.width / 2 - 0.02, floorY, 0);
+      bldgGroup.add(leftWin);
+
+      const rightWin = new THREE.Mesh(sharedWinGeo, sideMat);
+      rightWin.rotation.y = Math.PI / 2;
+      rightWin.position.set(plot.width / 2 + 0.02, floorY, 0);
+      bldgGroup.add(rightWin);
+    }
 
     // Marigold Toran Garland across the doorframe
     if (plot.hasToran) {
@@ -252,6 +301,34 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
       const bulbMesh = new THREE.Mesh(sharedBulbGeo, bulbMat);
       bulbMesh.position.set(bulbX, plinthHeight + plot.height + 0.15, plot.depth / 2 + 0.15);
       bldgGroup.add(bulbMesh);
+    }
+
+    // Cascading Golden Waterfall Lights on residential facades
+    if (bIdx % 2 === 0 && plot.height > 6) {
+      const curtainStrings = 4;
+      for (let cs = 0; cs < curtainStrings; cs++) {
+        const cx = ((cs + 0.5) / curtainStrings - 0.5) * (plot.width * 0.85);
+        const dropCount = Math.floor(plot.height * 1.5);
+        for (let d = 0; d < dropCount; d++) {
+          const dy = plinthHeight + plot.height - d * 0.7;
+          if (dy <= plinthHeight + 0.8) continue;
+          const bMat = sharedFairyMats[(bIdx + cs + d) % sharedFairyMats.length];
+          const bMesh = new THREE.Mesh(sharedBulbGeo, bMat);
+          bMesh.position.set(cx, dy, plot.depth / 2 + 0.1);
+          bldgGroup.add(bMesh);
+        }
+      }
+    }
+
+    // Sai Hospital Cyan Medical Cross Glow
+    if (plot.type === "hospital") {
+      const crossH = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 0.12), cyanMedicalMat);
+      crossH.position.set(0, plinthHeight + plot.height - 1.8, plot.depth / 2 + 0.2);
+      bldgGroup.add(crossH);
+
+      const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.8, 0.12), cyanMedicalMat);
+      crossV.position.set(0, plinthHeight + plot.height - 1.8, plot.depth / 2 + 0.2);
+      bldgGroup.add(crossV);
     }
 
     // 10. Hanging Akash Kandil Lantern from Upper Floor / Balcony
