@@ -1,26 +1,171 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #050714;
+  --foreground: #fdf8ee;
+  --gold: #f59e0b;
+  --gold-light: #fde68a;
+  --crimson: #e11d48;
+  --marigold: #f97316;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #050714;
+  color: #fdf8ee;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Diwali glow keyframes & utility animations */
+@keyframes flicker {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 28px rgba(239, 68, 68, 0.6));
+  }
+  25% {
+    opacity: 0.88;
+    transform: scale(0.97) rotate(-1deg);
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.8)) drop-shadow(0 0 20px rgba(239, 68, 68, 0.45));
+  }
+  50% {
+    opacity: 0.96;
+    transform: scale(1.04) rotate(1deg);
+    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 1)) drop-shadow(0 0 32px rgba(249, 115, 22, 0.7));
+  }
+  75% {
+    opacity: 0.92;
+    transform: scale(0.98) rotate(0.5deg);
+    filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.85)) drop-shadow(0 0 24px rgba(239, 68, 68, 0.5));
+  }
+}
+
+@keyframes floatLantern {
+  0% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-24px) translateX(8px) rotate(2deg);
+  }
+  100% {
+    transform: translateY(-48px) translateX(-6px) rotate(-1deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4), inset 0 0 15px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(245, 158, 11, 0.85), 0 0 60px rgba(249, 115, 22, 0.45), inset 0 0 25px rgba(245, 158, 11, 0.4);
+  }
+}
+
+@keyframes fairyLightBlink {
+  0%, 100% {
+    opacity: 0.4;
+    filter: brightness(0.8) drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.6) drop-shadow(0 0 10px currentColor);
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes shimmerText {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-flicker {
+  animation: flicker 2s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+.animate-float-lantern {
+  animation: floatLantern 6s infinite alternate ease-in-out;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+.animate-twinkle {
+  animation: twinkle 3s infinite ease-in-out;
+}
+
+.fairy-light-1 {
+  animation: fairyLightBlink 1.8s infinite ease-in-out;
+}
+.fairy-light-2 {
+  animation: fairyLightBlink 2.2s infinite ease-in-out 0.4s;
+}
+.fairy-light-3 {
+  animation: fairyLightBlink 1.5s infinite ease-in-out 0.8s;
+}
+.fairy-light-4 {
+  animation: fairyLightBlink 2.6s infinite ease-in-out 1.2s;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #FFF6D6 0%, #F59E0B 50%, #D97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-shimmer-text {
+  background: linear-gradient(90deg, #FDE68A 0%, #FFFFFF 25%, #F59E0B 50%, #FFFFFF 75%, #FDE68A 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmerText 5s linear infinite;
+}
+
+.glass-diwali-card {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.1);
+}
+
+.glass-diwali-card-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-diwali-card-hover:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 15px 50px -10px rgba(0, 0, 0, 0.8), 0 0 35px rgba(245, 158, 11, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #080c1f;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d97706;
 }
