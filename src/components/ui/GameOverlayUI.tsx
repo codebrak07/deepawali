@@ -21,7 +21,6 @@ import {
   RotateCcw,
   ZoomIn,
   ZoomOut,
-  Mail,
   DoorOpen,
 } from "lucide-react";
 import Link from "next/link";
@@ -48,6 +47,7 @@ interface GameOverlayUIProps {
   waypoint: { x: number; z: number } | null;
   onSetWaypoint: (pos: { x: number; z: number } | null) => void;
   isInsideBuilding?: boolean;
+  isInsideTemple?: boolean;
 }
 
 export function GameOverlayUI({
@@ -71,6 +71,7 @@ export function GameOverlayUI({
   waypoint,
   onSetWaypoint,
   isInsideBuilding = false,
+  isInsideTemple = false,
 }: GameOverlayUIProps) {
   const cameraPresets = [
     { id: "exploration", label: "Third Person", icon: Eye, tip: "Free Orbit Follow" },
@@ -80,10 +81,11 @@ export function GameOverlayUI({
   ];
 
   const fastTravelSpots = [
+    { id: "station-temple", name: "Shiva Temple", icon: Flame, x: 14, z: -21 },
     { id: "station-a", name: "Diyas", icon: Flame, x: 0, z: 8 },
     { id: "station-b", name: "Rangoli", icon: Palette, x: 0, z: -24 },
     { id: "station-c", name: "Lantern", icon: Send, x: 30, z: 0 },
-    { id: "station-letters", name: "Letters", icon: Mail, x: -16, z: 0 },
+    { id: "station-home", name: "Sana Home", icon: DoorOpen, x: -20, z: -7 },
   ];
 
   // Active contextual station info
@@ -98,6 +100,24 @@ export function GameOverlayUI({
   } else if (nearbyStation === "station-exit-home") {
     actionTitle = "🚪 EXIT TO STREET";
     actionIcon = DoorOpen;
+  } else if (nearbyStation === "station-enter-temple") {
+    actionTitle = "🕉️ ENTER SHIVA TEMPLE";
+    actionIcon = Sparkles;
+  } else if (nearbyStation === "station-exit-temple") {
+    actionTitle = "🚪 EXIT TEMPLE";
+    actionIcon = DoorOpen;
+  } else if (nearbyStation === "station-temple-pray") {
+    actionTitle = "🙏 PRAY / PRANAM";
+    actionIcon = Heart;
+  } else if (nearbyStation === "station-temple-flowers") {
+    actionTitle = "🌸 OFFER FLOWERS";
+    actionIcon = Sparkles;
+  } else if (nearbyStation === "station-temple-bilva") {
+    actionTitle = "🌿 OFFER BILVA LEAVES";
+    actionIcon = Sparkles;
+  } else if (nearbyStation === "station-temple-bell") {
+    actionTitle = "🔔 RING TEMPLE BELL";
+    actionIcon = Sparkles;
   }
 
   const ActionIcon = actionIcon;
@@ -116,6 +136,7 @@ export function GameOverlayUI({
             waypoint={waypoint}
             onSetWaypoint={onSetWaypoint}
             isInsideBuilding={isInsideBuilding}
+            isInsideTemple={isInsideTemple}
           />
         </div>
 
@@ -128,9 +149,20 @@ export function GameOverlayUI({
             </div>
             <div>
               <span className="text-xs sm:text-sm font-bold text-amber-100 flex items-center gap-1.5 leading-none">
-                <span>{isInsideBuilding ? "Sana's Home Interior" : "Sana's Open World"}</span>
+                <span>
+                  {isInsideTemple
+                    ? "Shiva Temple Sanctum"
+                    : isInsideBuilding
+                    ? "Sana's Home Interior"
+                    : "Sana's Open World"}
+                </span>
                 <span className="text-[10px] text-amber-300 font-normal hidden md:inline">
-                  • {isInsideBuilding ? "Living Room & Pooja Corner" : "Dattawadi, Akurdi (Pune)"}
+                  •{" "}
+                  {isInsideTemple
+                    ? "Consecrated Shivling & Abhishek"
+                    : isInsideBuilding
+                    ? "Living Room & Pooja Corner"
+                    : "Dattawadi, Akurdi (Pune)"}
                 </span>
               </span>
             </div>

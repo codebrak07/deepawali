@@ -24,6 +24,7 @@ interface MinimapUIProps {
   waypoint: { x: number; z: number } | null;
   onSetWaypoint: (pos: { x: number; z: number } | null) => void;
   isInsideBuilding?: boolean;
+  isInsideTemple?: boolean;
 }
 
 export function MinimapUI({
@@ -32,6 +33,7 @@ export function MinimapUI({
   waypoint,
   onSetWaypoint,
   isInsideBuilding = false,
+  isInsideTemple = false,
 }: MinimapUIProps) {
   // Map mode: "rotating" (player faces up) vs "north-up" (geographical north up)
   const [mapMode, setMapMode] = useState<"rotating" | "north-up">("rotating");
@@ -153,7 +155,22 @@ export function MinimapUI({
               const by = toSvgY(b.z - b.depth / 2);
               const bw = (b.width / worldWidth) * 300;
               const bd = (b.depth / worldHeight) * 240;
-              const isSpecial = b.id === "b-sai-hospital" || b.id === "b-sana-home" || b.id === "b-hanuman-mandir";
+              const isSpecial =
+                b.id === "b-sai-hospital" ||
+                b.id === "b-sana-home" ||
+                b.id === "b-shiva-temple" ||
+                b.id === "b-hanuman-mandir";
+
+              const fillColor =
+                b.id === "b-shiva-temple"
+                  ? "#d97706"
+                  : b.id === "b-sana-home"
+                  ? "#f43f5e"
+                  : b.id === "b-sai-hospital"
+                  ? "#0284c7"
+                  : b.id === "b-hanuman-mandir"
+                  ? "#ea580c"
+                  : "#1e293b";
 
               return (
                 <g key={b.id}>
@@ -162,12 +179,36 @@ export function MinimapUI({
                     y={by}
                     width={bw}
                     height={bd}
-                    fill={isSpecial ? (b.id === "b-sana-home" ? "#f43f5e" : b.id === "b-sai-hospital" ? "#0284c7" : "#ea580c") : "#1e293b"}
+                    fill={fillColor}
                     stroke={isSpecial ? "#f59e0b" : "#475569"}
                     strokeWidth={isSpecial ? "1.5" : "0.75"}
                     rx="1.5"
-                    opacity="0.85"
+                    opacity="0.88"
                   />
+                  {b.id === "b-shiva-temple" && (
+                    <text
+                      x={toSvgX(b.x)}
+                      y={toSvgY(b.z) + 3}
+                      fill="#ffffff"
+                      fontSize="6"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      SHIVA TEMPLE 🕉️
+                    </text>
+                  )}
+                  {b.id === "b-sana-home" && (
+                    <text
+                      x={toSvgX(b.x)}
+                      y={toSvgY(b.z) + 3}
+                      fill="#ffffff"
+                      fontSize="5.5"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      SANA HOME ❤️
+                    </text>
+                  )}
                 </g>
               );
             })}
@@ -226,6 +267,11 @@ export function MinimapUI({
           {isInsideBuilding && (
             <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/40 text-[9px] font-bold text-rose-200">
               Sana&apos;s Home
+            </div>
+          )}
+          {isInsideTemple && (
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-amber-950/90 border border-amber-500/50 text-[9px] font-bold text-amber-200">
+              Shiva Sanctum 🕉️
             </div>
           )}
         </div>

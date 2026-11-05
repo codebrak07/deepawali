@@ -8,6 +8,7 @@ import { StorybookLanding } from "@/components/story/StorybookLanding";
 import { StationModals } from "@/components/ui/StationModals";
 import { FinalSurpriseModal } from "@/components/surprise/FinalSurpriseModal";
 import { useWonderland } from "@/context/WonderlandContext";
+import { soundManager } from "@/components/audio/SoundManager";
 
 export default function Page() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -27,6 +28,7 @@ export default function Page() {
   const [playerHeading, setPlayerHeading] = useState<number>(0);
   const [waypoint, setWaypoint] = useState<{ x: number; z: number } | null>(null);
   const [isInsideBuilding, setIsInsideBuilding] = useState<boolean>(false);
+  const [isInsideTemple, setIsInsideTemple] = useState<boolean>(false);
 
   // Initialize 3D Engine on mount
   useEffect(() => {
@@ -43,6 +45,7 @@ export default function Page() {
       setPlayerPos(pos);
       setPlayerHeading(heading);
       setIsInsideBuilding(engine.isInsideBuilding);
+      setIsInsideTemple(engine.isInsideTemple);
     };
 
     engine.onWaypointChange = (wp) => {
@@ -82,6 +85,23 @@ export default function Page() {
         } else if (engine.nearbyStation === "station-exit-home") {
           engine.exitBuilding();
           setIsInsideBuilding(false);
+        } else if (engine.nearbyStation === "station-enter-temple") {
+          engine.enterTemple();
+          setIsInsideTemple(true);
+        } else if (engine.nearbyStation === "station-exit-temple") {
+          engine.exitTemple();
+          setIsInsideTemple(false);
+        } else if (engine.nearbyStation === "station-temple-pray") {
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-temple-bell") {
+          engine.ringTempleBell();
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-temple-flowers") {
+          engine.offerTempleFlowers();
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-temple-bilva") {
+          engine.offerTempleBilvaLeaves();
+          soundManager.playDiyaChime();
         } else if (engine.nearbyStation === "station-surprise") {
           setShowFinalSurprise(true);
         } else {
@@ -184,6 +204,35 @@ export default function Page() {
       setIsInsideBuilding(false);
       return;
     }
+    if (stId === "station-enter-temple") {
+      engineRef.current?.enterTemple();
+      setIsInsideTemple(true);
+      return;
+    }
+    if (stId === "station-exit-temple") {
+      engineRef.current?.exitTemple();
+      setIsInsideTemple(false);
+      return;
+    }
+    if (stId === "station-temple-pray") {
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-temple-bell") {
+      engineRef.current?.ringTempleBell();
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-temple-flowers") {
+      engineRef.current?.offerTempleFlowers();
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-temple-bilva") {
+      engineRef.current?.offerTempleBilvaLeaves();
+      soundManager.playDiyaChime();
+      return;
+    }
     if (stId === "station-surprise") {
       setShowFinalSurprise(true);
     } else {
@@ -262,6 +311,7 @@ export default function Page() {
           waypoint={waypoint}
           onSetWaypoint={handleSetWaypoint}
           isInsideBuilding={isInsideBuilding}
+          isInsideTemple={isInsideTemple}
         />
       )}
 
