@@ -33,7 +33,7 @@ export interface BuildingPlot {
 export interface StationLocation {
   id: string;
   name: string;
-  type: "diya" | "rangoli" | "lantern" | "landmark";
+  type: "diya" | "rangoli" | "lantern" | "landmark" | "temple";
   x: number;
   z: number;
   label: string;
