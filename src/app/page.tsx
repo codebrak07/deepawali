@@ -186,12 +186,14 @@ export default function Page() {
       )}
 
       {/* Interactive Station Modals (Stations A, B, C) */}
-      <StationModals
-        stationId={activeModalStation}
-        onClose={() => setActiveModalStation(null)}
-        onRangoliProgressUpdate={handleRangoliProgress}
-        onLanternReleaseTrigger={handleLanternRelease}
-      />
+      {activeModalStation && (
+        <StationModals
+          stationId={activeModalStation}
+          onClose={() => setActiveModalStation(null)}
+          onRangoliProgressUpdate={handleRangoliProgress}
+          onLanternReleaseTrigger={handleLanternRelease}
+        />
+      )}
 
       {/* Secret Final Surprise Modal */}
       {showFinalSurprise && <FinalSurpriseModal />}

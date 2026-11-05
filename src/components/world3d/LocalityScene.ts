@@ -46,6 +46,7 @@ export class LocalitySceneEngine {
   private isRunning = false;
   private animationId: number | null = null;
   private clock = new THREE.Clock();
+  private tempToTarget = new THREE.Vector3();
 
   constructor(container: HTMLDivElement) {
     this.container = container;
@@ -55,17 +56,24 @@ export class LocalitySceneEngine {
     this.scene.background = new THREE.Color(0x07091a);
     this.scene.fog = new THREE.FogExp2(0x07091a, 0.009); // Soft atmospheric fog
 
+    const width = container.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 800);
+    const height = container.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 600);
+
     this.camera = new THREE.PerspectiveCamera(
       48,
-      container.clientWidth / container.clientHeight,
+      width / (height || 1),
       0.1,
       400
     );
     this.camera.position.set(-12, 16, 28);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance",
+      precision: "mediump",
+    });
+    this.renderer.setSize(width, height);
+    this.renderer.setPixelRatio(Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -222,7 +230,7 @@ export class LocalitySceneEngine {
         this.isWalking = true;
         this.charRotation = Math.atan2(dx, dz);
       } else if (this.targetDestination) {
-        const toTarget = new THREE.Vector3().subVectors(this.targetDestination, this.charPos);
+        const toTarget = this.tempToTarget.subVectors(this.targetDestination, this.charPos);
         toTarget.y = 0;
         const dist = toTarget.length();
 

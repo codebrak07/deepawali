@@ -15,9 +15,40 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
   const doorWoodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.6 });
   const marigoldMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xd97706, emissiveIntensity: 0.6 });
   const waterTankMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+  const streamerMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
+  const lanternMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: 0xf97316,
+    emissiveIntensity: 0.9,
+  });
+
+  // Reusable Window Materials for each emission color (zero per-window allocations)
+  const sharedWindowMats = windowEmissiveColors.map(
+    (col) =>
+      new THREE.MeshStandardMaterial({
+        color: 0xffedd5,
+        emissive: col,
+        emissiveIntensity: 1.1,
+        roughness: 0.2,
+      })
+  );
 
   // Fairy light colors for rooflines & balconies
   const fairyPalette = [0xf59e0b, 0xec4899, 0x10b981, 0x06b6d4, 0xf43f5e, 0xfef08a];
+  const sharedFairyMats = fairyPalette.map((col) => new THREE.MeshBasicMaterial({ color: col }));
+
+  // Reusable Shared Geometries (zero per-building duplicate allocations)
+  const sharedStepGeo = new THREE.BoxGeometry(2.4, 0.18, 0.8);
+  const sharedMumtyGeo = new THREE.BoxGeometry(2.8, 2.4, 3.0);
+  const sharedTankGeo = new THREE.CylinderGeometry(0.85, 0.85, 1.5, 10);
+  const sharedDoorGeo = new THREE.PlaneGeometry(1.6, 2.3);
+  const sharedWinGeo = new THREE.PlaneGeometry(1.25, 1.6);
+  const sharedChhajjaGeo = new THREE.BoxGeometry(1.5, 0.12, 0.45);
+  const sharedSillGeo = new THREE.BoxGeometry(1.4, 0.08, 0.25);
+  const sharedTasselGeo = new THREE.ConeGeometry(0.07, 0.28, 4);
+  const sharedBulbGeo = new THREE.SphereGeometry(0.09, 4, 4);
+  const sharedOctaGeo = new THREE.OctahedronGeometry(0.42, 0);
+  const sharedStreamerGeo = new THREE.ConeGeometry(0.08, 0.6, 4);
 
   LOCALITY_BUILDINGS.forEach((plot: BuildingPlot, bIdx: number) => {
     const bldgGroup = new THREE.Group();
@@ -42,8 +73,7 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
     bldgGroup.add(plinthMesh);
 
     // Entrance Steps
-    const stepGeo = new THREE.BoxGeometry(2.4, 0.18, 0.8);
-    const stepMesh = new THREE.Mesh(stepGeo, trimMat);
+    const stepMesh = new THREE.Mesh(sharedStepGeo, trimMat);
     stepMesh.position.set(0, 0.09, plot.depth / 2 + 0.4);
     bldgGroup.add(stepMesh);
 
@@ -77,14 +107,12 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
     bldgGroup.add(parapetMesh);
 
     // Rooftop Staircase Mumty Cabin
-    const mumtyGeo = new THREE.BoxGeometry(2.8, 2.4, 3.0);
-    const mumtyMesh = new THREE.Mesh(mumtyGeo, wallMat);
+    const mumtyMesh = new THREE.Mesh(sharedMumtyGeo, wallMat);
     mumtyMesh.position.set(-plot.width / 4, plinthHeight + plot.height + 1.2, plot.depth / 4);
     bldgGroup.add(mumtyMesh);
 
     // Rooftop Water Storage Tank (Sintex blue cylinder)
-    const tankGeo = new THREE.CylinderGeometry(0.85, 0.85, 1.5, 16);
-    const tankMesh = new THREE.Mesh(tankGeo, waterTankMat);
+    const tankMesh = new THREE.Mesh(sharedTankGeo, waterTankMat);
     tankMesh.position.set(plot.width / 4, plinthHeight + plot.height + 1.0, -plot.depth / 4);
     tankMesh.castShadow = true;
     bldgGroup.add(tankMesh);
@@ -127,30 +155,20 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
         if (f === 0 && w === Math.floor(windowsPerRow / 2)) continue;
 
         const winX = ((w + 0.5) / windowsPerRow - 0.5) * (plot.width * 0.78);
-        const emissiveCol = windowEmissiveColors[(bIdx + f + w) % windowEmissiveColors.length];
-
-        const winMat = new THREE.MeshStandardMaterial({
-          color: 0xffedd5,
-          emissive: emissiveCol,
-          emissiveIntensity: 1.1, // Bright warm glow
-          roughness: 0.2,
-        });
+        const winMat = sharedWindowMats[(bIdx + f + w) % sharedWindowMats.length];
 
         // Window Glass Pane
-        const winGeo = new THREE.PlaneGeometry(1.25, 1.6);
-        const winMesh = new THREE.Mesh(winGeo, winMat);
+        const winMesh = new THREE.Mesh(sharedWinGeo, winMat);
         winMesh.position.set(winX, floorY, plot.depth / 2 + 0.02);
         bldgGroup.add(winMesh);
 
         // Window Sunshade (Chhajja ledge)
-        const chhajjaGeo = new THREE.BoxGeometry(1.5, 0.12, 0.45);
-        const chhajjaMesh = new THREE.Mesh(chhajjaGeo, trimMat);
+        const chhajjaMesh = new THREE.Mesh(sharedChhajjaGeo, trimMat);
         chhajjaMesh.position.set(winX, floorY + 0.9, plot.depth / 2 + 0.23);
         bldgGroup.add(chhajjaMesh);
 
         // Window Sill
-        const sillGeo = new THREE.BoxGeometry(1.4, 0.08, 0.25);
-        const sillMesh = new THREE.Mesh(sillGeo, trimMat);
+        const sillMesh = new THREE.Mesh(sharedSillGeo, trimMat);
         sillMesh.position.set(winX, floorY - 0.85, plot.depth / 2 + 0.14);
         bldgGroup.add(sillMesh);
       }
@@ -188,10 +206,8 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
         const fairyBulbCount = 8;
         for (let fb = 0; fb < fairyBulbCount; fb++) {
           const bulbX = ((fb + 0.5) / fairyBulbCount - 0.5) * (balcWidth * 0.9);
-          const col = fairyPalette[(bIdx + fb) % fairyPalette.length];
-          const bulbGeo = new THREE.SphereGeometry(0.08, 6, 6);
-          const bulbMat = new THREE.MeshBasicMaterial({ color: col });
-          const bulbMesh = new THREE.Mesh(bulbGeo, bulbMat);
+          const bulbMat = sharedFairyMats[(bIdx + fb) % sharedFairyMats.length];
+          const bulbMesh = new THREE.Mesh(sharedBulbGeo, bulbMat);
           bulbMesh.position.set(bulbX, balconyY + 0.88, plot.depth / 2 + 1.7);
           bldgGroup.add(bulbMesh);
         }
@@ -199,18 +215,17 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
     }
 
     // 8. Ground Floor Entrance Doorway & Festive Lantern
-    const doorGeo = new THREE.PlaneGeometry(1.6, 2.5);
-    const doorMesh = new THREE.Mesh(doorGeo, doorWoodMat);
-    doorMesh.position.set(0, plinthHeight + 1.25, plot.depth / 2 + 0.03);
+    const doorMesh = new THREE.Mesh(sharedDoorGeo, doorWoodMat);
+    doorMesh.position.set(0, plinthHeight + 1.15, plot.depth / 2 + 0.03);
     bldgGroup.add(doorMesh);
 
-    // Warm Doorway Sconce Light
-    const sconceLight = new THREE.PointLight(0xf59e0b, 1.4, 5.0, 1.5);
-    sconceLight.position.set(0, plinthHeight + 2.7, plot.depth / 2 + 0.4);
-    bldgGroup.add(sconceLight);
-
-    const sconceMesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfde047 }));
-    sconceMesh.position.copy(sconceLight.position);
+    // Warm Doorway Glowing Sconce
+    const sconceMesh = new THREE.Mesh(
+      sharedBulbGeo,
+      new THREE.MeshBasicMaterial({ color: 0xfef08a })
+    );
+    sconceMesh.position.set(0, plinthHeight + 2.5, plot.depth / 2 + 0.2);
+    sconceMesh.scale.set(1.8, 1.8, 1.8);
     bldgGroup.add(sconceMesh);
 
     // Marigold Toran Garland across the doorframe
@@ -222,7 +237,7 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
 
       // Hanging Marigold Tassels
       for (let t = -0.8; t <= 0.8; t += 0.4) {
-        const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.28, 5), marigoldMat);
+        const tassel = new THREE.Mesh(sharedTasselGeo, marigoldMat);
         tassel.rotation.x = Math.PI;
         tassel.position.set(t, plinthHeight + 2.34, plot.depth / 2 + 0.08);
         bldgGroup.add(tassel);
@@ -233,10 +248,8 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
     const roofBulbCount = Math.floor(plot.width * 2.2);
     for (let rb = 0; rb < roofBulbCount; rb++) {
       const bulbX = ((rb + 0.5) / roofBulbCount - 0.5) * plot.width;
-      const col = fairyPalette[(bIdx * 2 + rb) % fairyPalette.length];
-      const bulbGeo = new THREE.SphereGeometry(0.09, 6, 6);
-      const bulbMat = new THREE.MeshBasicMaterial({ color: col });
-      const bulbMesh = new THREE.Mesh(bulbGeo, bulbMat);
+      const bulbMat = sharedFairyMats[(bIdx * 2 + rb) % sharedFairyMats.length];
+      const bulbMesh = new THREE.Mesh(sharedBulbGeo, bulbMat);
       bulbMesh.position.set(bulbX, plinthHeight + plot.height + 0.15, plot.depth / 2 + 0.15);
       bldgGroup.add(bulbMesh);
     }
@@ -245,20 +258,12 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
     const lanternGroup = new THREE.Group();
     lanternGroup.position.set(plot.width * 0.35, plinthHeight + plot.height - 1.2, plot.depth / 2 + 0.6);
 
-    const lCore = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.42, 0),
-      new THREE.MeshStandardMaterial({
-        color: 0xf59e0b,
-        emissive: 0xf97316,
-        emissiveIntensity: 0.9,
-      })
-    );
+    const lCore = new THREE.Mesh(sharedOctaGeo, lanternMat);
     lanternGroup.add(lCore);
 
     // Lantern tassels
-    const streamerMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
     for (let st = -0.18; st <= 0.18; st += 0.18) {
-      const s = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.6, 4), streamerMat);
+      const s = new THREE.Mesh(sharedStreamerGeo, streamerMat);
       s.position.set(st, -0.6, 0);
       lanternGroup.add(s);
     }

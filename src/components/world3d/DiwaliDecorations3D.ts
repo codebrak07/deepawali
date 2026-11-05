@@ -19,6 +19,28 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
   const diyas: DiyaObject[] = [];
   const floatingLanterns: THREE.Group[] = [];
 
+  // Reusable Shared Materials & Geometries
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.4, metalness: 0.8 });
+  const lanternGlassMat = new THREE.MeshStandardMaterial({
+    color: 0xffedd5,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 1.6,
+    roughness: 0.1,
+  });
+  const clayMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.8 });
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+  const flameGlowMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.5 });
+  const fairyColors = [0xf59e0b, 0xec4899, 0x10b981, 0x06b6d4, 0xf43f5e, 0xfef08a];
+  const sharedFairyMats = fairyColors.map((c) => new THREE.MeshBasicMaterial({ color: c }));
+
+  const sharedPoleGeo = new THREE.CylinderGeometry(0.12, 0.16, 4.2, 6);
+  const sharedBaseGeo = new THREE.CylinderGeometry(0.3, 0.35, 0.5, 6);
+  const sharedHousingGeo = new THREE.CylinderGeometry(0.32, 0.22, 0.65, 6);
+  const sharedCapGeo = new THREE.ConeGeometry(0.42, 0.35, 6);
+  const sharedDiyaBowlGeo = new THREE.CylinderGeometry(0.35, 0.15, 0.18, 8);
+  const sharedDiyaFlameGeo = new THREE.ConeGeometry(0.12, 0.35, 6);
+  const sharedBulbGeo = new THREE.SphereGeometry(0.11, 4, 4);
+
   // 1. Ornate Diwali Swagat Kaman (Gateway) across Dattawadi Main Road
   const gatewayGroup = new THREE.Group();
   gatewayGroup.position.set(-36, 0, 0);
@@ -62,12 +84,10 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
   signMesh.position.set(0, 5.6, 0);
   gatewayGroup.add(signMesh);
 
-  // Gateway Lanterns on pillars
-  [-4.8, 4.8].forEach((zPos) => {
-    const pLight = new THREE.PointLight(0xf59e0b, 2.5, 9.0, 1.2);
-    pLight.position.set(0, 7.2, zPos);
-    gatewayGroup.add(pLight);
-  });
+  // Gateway illumination light
+  const gatewayLight = new THREE.PointLight(0xf59e0b, 2.8, 16.0, 1.3);
+  gatewayLight.position.set(0, 7.0, 0);
+  gatewayGroup.add(gatewayLight);
 
   decorationsGroup.add(gatewayGroup);
 
@@ -93,44 +113,44 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
     { x: -4.0, z: -32 },
   ];
 
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.4, metalness: 0.8 });
-  const lanternGlassMat = new THREE.MeshStandardMaterial({
-    color: 0xffedd5,
-    emissive: 0xf59e0b,
-    emissiveIntensity: 1.2,
-    roughness: 0.1,
-  });
-
   streetLampPositions.forEach((pos) => {
     const lampG = new THREE.Group();
     lampG.position.set(pos.x, 0, pos.z);
 
     // Lamp Post Pole
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 4.2, 10), poleMat);
+    const pole = new THREE.Mesh(sharedPoleGeo, poleMat);
     pole.position.y = 2.1;
     lampG.add(pole);
 
     // Ornate Base
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.5, 8), poleMat);
+    const base = new THREE.Mesh(sharedBaseGeo, poleMat);
     base.position.y = 0.25;
     lampG.add(base);
 
     // Glowing Lantern Housing
-    const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.22, 0.65, 8), lanternGlassMat);
+    const housing = new THREE.Mesh(sharedHousingGeo, lanternGlassMat);
     housing.position.y = 4.3;
     lampG.add(housing);
 
     // Lamp Cap
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.35, 8), poleMat);
+    const cap = new THREE.Mesh(sharedCapGeo, poleMat);
     cap.position.y = 4.8;
     lampG.add(cap);
 
-    // Warm Street PointLight illuminating the road
-    const streetLight = new THREE.PointLight(0xf59e0b, 2.2, 11.0, 1.4);
-    streetLight.position.set(0, 4.3, 0);
-    lampG.add(streetLight);
-
     decorationsGroup.add(lampG);
+  });
+
+  // Key Area PointLights (High efficiency, wide coverage)
+  const streetLightPositions = [
+    { x: -20, y: 5.5, z: 0, range: 22, intensity: 2.6 },
+    { x: 14, y: 5.5, z: 0, range: 22, intensity: 2.6 },
+    { x: 0, y: 6.0, z: -22, range: 24, intensity: 3.0 },
+  ];
+
+  streetLightPositions.forEach((lp) => {
+    const sLight = new THREE.PointLight(0xf59e0b, lp.intensity, lp.range, 1.4);
+    sLight.position.set(lp.x, lp.y, lp.z);
+    decorationsGroup.add(sLight);
   });
 
   // 3. Physical 3D Clay Diyas along the Streets
@@ -163,50 +183,51 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
     { x: -3.2, z: -28 },
   ];
 
-  const clayMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.8 });
-  const flameMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+  // Dedicated light for Station A diya cluster
+  const stationADiyaLight = new THREE.PointLight(0xf59e0b, 2.5, 12.0, 1.3);
+  stationADiyaLight.position.set(0, 1.2, 8.5);
+  decorationsGroup.add(stationADiyaLight);
 
   diyaPositions.forEach((pos, idx) => {
     const diyaG = new THREE.Group();
     diyaG.position.set(pos.x, 0.15, pos.z);
 
-    const bowlMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.15, 0.18, 12), clayMat);
+    const bowlMesh = new THREE.Mesh(sharedDiyaBowlGeo, clayMat);
     bowlMesh.position.y = 0.09;
     diyaG.add(bowlMesh);
 
-    const flameMesh = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.35, 8), flameMat);
+    const flameMesh = new THREE.Mesh(sharedDiyaFlameGeo, flameMat);
     flameMesh.position.y = 0.36;
     diyaG.add(flameMesh);
 
-    const light = new THREE.PointLight(0xf59e0b, 1.8, 6.5, 1.5);
-    light.position.set(0, 0.45, 0);
-    diyaG.add(light);
+    // Glowing halo mesh
+    const glowHalo = new THREE.Mesh(sharedBulbGeo, flameGlowMat);
+    glowHalo.position.y = 0.36;
+    glowHalo.scale.set(1.5, 1.8, 1.5);
+    diyaG.add(glowHalo);
 
     decorationsGroup.add(diyaG);
     diyas.push({
       group: diyaG,
-      light,
+      light: stationADiyaLight,
       isLit: true,
       stationId: pos.isStation ? `diya-${idx}` : undefined,
     });
   });
 
   // 4. Multi-color Fairy Lights Crossing Across Dattawadi Main Road
-  const fairyColors = [0xf59e0b, 0xec4899, 0x10b981, 0x06b6d4, 0xf43f5e, 0xfef08a];
   const wireXPositions = [-28, -18, -8, 6, 18, 28, 42];
 
   wireXPositions.forEach((wireX) => {
     const wireY = 6.2;
-    const bulbCount = 16;
+    const bulbCount = 14;
 
     for (let b = 0; b < bulbCount; b++) {
       const zProgress = (b / (bulbCount - 1)) * 13 - 6.5;
       const sag = Math.sin((b / (bulbCount - 1)) * Math.PI) * 1.1;
 
-      const bulbColor = fairyColors[b % fairyColors.length];
-      const bulbGeo = new THREE.SphereGeometry(0.12, 8, 8);
-      const bulbMat = new THREE.MeshBasicMaterial({ color: bulbColor });
-      const bulbMesh = new THREE.Mesh(bulbGeo, bulbMat);
+      const bulbMat = sharedFairyMats[b % sharedFairyMats.length];
+      const bulbMesh = new THREE.Mesh(sharedBulbGeo, bulbMat);
       bulbMesh.position.set(wireX, wireY - sag, zProgress);
       decorationsGroup.add(bulbMesh);
     }
@@ -224,31 +245,20 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
     { x: 35, y: 11.5, z: 5 },
   ];
 
+  const sharedOcta = new THREE.OctahedronGeometry(0.85, 0);
+  const lanternMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: 0xf97316,
+    emissiveIntensity: 1.8,
+    roughness: 0.2,
+  });
+
   lanternPositions.forEach((lPos) => {
     const lGroup = new THREE.Group();
     lGroup.position.set(lPos.x, lPos.y, lPos.z);
 
-    const coreMesh = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.75, 0),
-      new THREE.MeshStandardMaterial({
-        color: 0xf59e0b,
-        emissive: 0xf97316,
-        emissiveIntensity: 0.95,
-        roughness: 0.2,
-      })
-    );
-    lGroup.add(coreMesh);
-
-    const streamerMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
-    [-0.32, 0, 0.32].forEach((offX) => {
-      const streamer = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.95, 4), streamerMat);
-      streamer.position.set(offX, -0.95, 0);
-      lGroup.add(streamer);
-    });
-
-    const lLight = new THREE.PointLight(0xf59e0b, 1.8, 9.0);
-    lLight.position.set(0, 0, 0);
-    lGroup.add(lLight);
+    const body = new THREE.Mesh(sharedOcta, lanternMat);
+    lGroup.add(body);
 
     decorationsGroup.add(lGroup);
     floatingLanterns.push(lGroup);
@@ -330,14 +340,9 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
       l.rotation.y = time * 0.35 + i;
     });
 
-    // Animate golden firefly particles drifting
-    const posAttr = floatingParticles.geometry.attributes.position as THREE.BufferAttribute;
-    const posArr = posAttr.array as Float32Array;
-    for (let p = 0; p < particleCount; p++) {
-      posArr[p * 3 + 1] += Math.sin(time * 1.8 + p) * 0.006;
-      posArr[p * 3] += Math.cos(time * 1.2 + p) * 0.004;
-    }
-    posAttr.needsUpdate = true;
+    // Animate golden firefly particles drifting smoothly with 0 GPU buffer stalls
+    floatingParticles.rotation.y = time * 0.02;
+    floatingParticles.position.y = Math.sin(time * 0.8) * 0.35;
   };
 
   return {
