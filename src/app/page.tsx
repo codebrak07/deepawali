@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { LocalitySceneEngine, CameraViewMode } from "@/components/world3d/LocalityScene";
 import { GameOverlayUI } from "@/components/ui/GameOverlayUI";
+import { CinematicIntro } from "@/components/ui/CinematicIntro";
+import { StorybookLanding } from "@/components/story/StorybookLanding";
 import { StationModals } from "@/components/ui/StationModals";
 import { FinalSurpriseModal } from "@/components/surprise/FinalSurpriseModal";
 import { useWonderland } from "@/context/WonderlandContext";
@@ -14,7 +16,9 @@ export default function Page() {
 
   const { soundEnabled, toggleSound, showFinalSurprise, setShowFinalSurprise } = useWonderland();
 
-  // Camera & Interaction states
+  // App & Experience State
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(false);
+  const [isExploreMode, setIsExploreMode] = useState<boolean>(false);
   const [cameraMode, setCameraMode] = useState<CameraViewMode>("exploration");
   const [nearbyStation, setNearbyStation] = useState<string | null>(null);
   const [activeModalStation, setActiveModalStation] = useState<string | null>(null);
@@ -32,7 +36,7 @@ export default function Page() {
 
     engine.start();
 
-    // Keyboard controls for WASD / Arrow Keys & 'E' for interaction
+    // Keyboard controls for WASD / Arrow Keys & [E] for interaction
     const keysPressed = new Set<string>();
 
     const updateInputFromKeys = () => {
@@ -77,7 +81,30 @@ export default function Page() {
     };
   }, []);
 
-  // Camera mode change
+  // Handle switching between Story Mode and Explore 3D Mode
+  const handleToggleMode = () => {
+    const nextExplore = !isExploreMode;
+    setIsExploreMode(nextExplore);
+
+    if (engineRef.current) {
+      if (nextExplore) {
+        engineRef.current.setCameraMode(cameraMode);
+      } else {
+        engineRef.current.setCameraMode("story");
+      }
+    }
+  };
+
+  const handleEnterExploreMode = (stationId?: string) => {
+    setIsExploreMode(true);
+    if (engineRef.current) {
+      engineRef.current.setCameraMode(cameraMode);
+      if (stationId === "station-a") engineRef.current.navigateTo(0, 8);
+      else if (stationId === "station-b") engineRef.current.navigateTo(0, -24);
+      else if (stationId === "station-c") engineRef.current.navigateTo(30, 0);
+    }
+  };
+
   const handleCameraModeChange = (mode: CameraViewMode) => {
     setCameraMode(mode);
     if (engineRef.current) {
@@ -85,21 +112,18 @@ export default function Page() {
     }
   };
 
-  // Joystick input from mobile touch
   const handleJoystickMove = (x: number, y: number) => {
     if (engineRef.current) {
       engineRef.current.setInputVector(x, y);
     }
   };
 
-  // Fast travel teleport
   const handleTeleport = (x: number, z: number) => {
     if (engineRef.current) {
       engineRef.current.navigateTo(x, z);
     }
   };
 
-  // Station Modal Actions
   const handleRangoliProgress = (progress: number) => {
     if (engineRef.current) {
       engineRef.current.rangoliProgress = progress;
@@ -115,28 +139,52 @@ export default function Page() {
 
   return (
     <div
-      className="relative w-screen h-screen overflow-hidden bg-[#060818]"
-      style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}
+      className={`relative w-screen min-h-screen bg-[#07091a] text-slate-100 ${
+        isExploreMode ? "overflow-hidden h-screen" : "overflow-x-hidden overflow-y-auto"
+      }`}
     >
-      {/* 3D WebGL Canvas Container (Occupies 100% of viewport) */}
+      {/* 3D WebGL Canvas Container (Fixed Full-Viewport Backdrop) */}
       <div
         ref={containerRef}
-        className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
-        style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
+        className="fixed inset-0 w-full h-full cursor-grab active:cursor-grabbing z-0"
+        style={{ width: "100vw", height: "100vh", position: "fixed", top: 0, left: 0 }}
       />
 
-      {/* Game HUD Overlay */}
-      <GameOverlayUI
-        cameraMode={cameraMode}
-        onCameraModeChange={handleCameraModeChange}
-        soundEnabled={soundEnabled}
-        onToggleSound={toggleSound}
-        nearbyStation={nearbyStation}
-        onInteractStation={(stId) => setActiveModalStation(stId)}
-        onTeleport={handleTeleport}
-        onJoystickMove={handleJoystickMove}
-        onOpenSurprise={() => setShowFinalSurprise(true)}
-      />
+      {/* Cinematic Intro Sequence (0-8s for Sana) */}
+      {!hasSeenIntro && (
+        <CinematicIntro
+          onEnter={() => {
+            setHasSeenIntro(true);
+            setIsExploreMode(false); // Opens into storybook landing
+            if (engineRef.current) engineRef.current.setCameraMode("story");
+          }}
+        />
+      )}
+
+      {/* Persistent Game HUD Controls */}
+      {hasSeenIntro && (
+        <GameOverlayUI
+          cameraMode={cameraMode}
+          onCameraModeChange={handleCameraModeChange}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
+          nearbyStation={nearbyStation}
+          onInteractStation={(stId) => setActiveModalStation(stId)}
+          onTeleport={handleTeleport}
+          onJoystickMove={handleJoystickMove}
+          onOpenSurprise={() => setShowFinalSurprise(true)}
+          isExploreMode={isExploreMode}
+          onToggleMode={handleToggleMode}
+        />
+      )}
+
+      {/* Story Mode: Full Editorial Scrollable Website */}
+      {hasSeenIntro && !isExploreMode && (
+        <StorybookLanding
+          onEnterExploreMode={handleEnterExploreMode}
+          onOpenSurprise={() => setShowFinalSurprise(true)}
+        />
+      )}
 
       {/* Interactive Station Modals (Stations A, B, C) */}
       <StationModals

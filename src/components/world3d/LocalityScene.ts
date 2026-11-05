@@ -6,7 +6,7 @@ import { createAalekhCharacter, createShirjanaCharacter, createBunnyCompanion, C
 import { createInteractiveStations, Station3DObjects } from "./InteractiveStations3D";
 import { INTERACTIVE_STATIONS } from "./LocalityData";
 
-export type CameraViewMode = "exploration" | "closeup" | "street" | "birdeye" | "lanternsky";
+export type CameraViewMode = "exploration" | "closeup" | "street" | "birdeye" | "lanternsky" | "story";
 
 export class LocalitySceneEngine {
   public scene: THREE.Scene;
@@ -29,11 +29,11 @@ export class LocalitySceneEngine {
   private targetDestination: THREE.Vector3 | null = null;
 
   // Camera Rig & State
-  public cameraMode: CameraViewMode = "exploration";
-  private targetCameraPos = new THREE.Vector3();
-  private targetLookAt = new THREE.Vector3();
-  private currentCameraPos = new THREE.Vector3(0, 8, 16);
-  private currentLookAt = new THREE.Vector3(0, 1.5, 4);
+  public cameraMode: CameraViewMode = "story"; // Default to cinematic story framing
+  private targetCameraPos = new THREE.Vector3(-12, 16, 28);
+  private targetLookAt = new THREE.Vector3(0, 2, 0);
+  private currentCameraPos = new THREE.Vector3(-12, 16, 28);
+  private currentLookAt = new THREE.Vector3(0, 2, 0);
 
   // Stations State
   public nearbyStation: string | null = null;
@@ -52,16 +52,16 @@ export class LocalitySceneEngine {
 
     // 1. Scene & Renderer
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x060818);
-    this.scene.fog = new THREE.FogExp2(0x060818, 0.012);
+    this.scene.background = new THREE.Color(0x07091a);
+    this.scene.fog = new THREE.FogExp2(0x07091a, 0.009); // Soft atmospheric fog
 
     this.camera = new THREE.PerspectiveCamera(
-      50,
+      48,
       container.clientWidth / container.clientHeight,
       0.1,
-      350
+      400
     );
-    this.camera.position.set(0, 8, 16);
+    this.camera.position.set(-12, 16, 28);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -69,22 +69,26 @@ export class LocalitySceneEngine {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.35; // Bright, vibrant festive exposure!
     container.appendChild(this.renderer.domElement);
 
-    // 2. Lighting Setup
-    const ambientLight = new THREE.AmbientLight(0x272744, 0.9);
+    // 2. Lighting Setup (Bright, warm, vibrant Diwali atmosphere)
+    const ambientLight = new THREE.AmbientLight(0x42385c, 1.4);
     this.scene.add(ambientLight);
 
+    // Soft Festive Ground-Bounce Hemispherical Light
+    const hemiLight = new THREE.HemisphereLight(0x4338ca, 0x9a3412, 0.85);
+    this.scene.add(hemiLight);
+
     // Directional Moonlight
-    const moonDirLight = new THREE.DirectionalLight(0xb4c6fc, 0.9);
-    moonDirLight.position.set(50, 70, -60);
+    const moonDirLight = new THREE.DirectionalLight(0xc7d2fe, 1.1);
+    moonDirLight.position.set(50, 75, -60);
     moonDirLight.castShadow = true;
     moonDirLight.shadow.mapSize.width = 1024;
     moonDirLight.shadow.mapSize.height = 1024;
     moonDirLight.shadow.camera.near = 10;
-    moonDirLight.shadow.camera.far = 200;
-    const d = 50;
+    moonDirLight.shadow.camera.far = 220;
+    const d = 55;
     moonDirLight.shadow.camera.left = -d;
     moonDirLight.shadow.camera.right = d;
     moonDirLight.shadow.camera.top = d;
@@ -131,19 +135,17 @@ export class LocalitySceneEngine {
     const mouse = new THREE.Vector2();
 
     this.container.addEventListener("pointerdown", (e) => {
-      // Only process click-to-move if clicked directly on canvas (not HUD buttons)
       if ((e.target as HTMLElement).tagName !== "CANVAS") return;
+      if (this.cameraMode === "story") return; // In story mode, canvas clicks don't move character
 
       const rect = this.container.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, this.camera);
-      // Plane at y = 0
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const intersection = new THREE.Vector3();
       if (raycaster.ray.intersectPlane(plane, intersection)) {
-        // Clamp destination to navigable locality limits
         this.targetDestination = new THREE.Vector3(
           Math.max(-50, Math.min(50, intersection.x)),
           0,
@@ -160,7 +162,7 @@ export class LocalitySceneEngine {
   public setInputVector(x: number, y: number) {
     this.moveVector.set(x, y);
     if (this.moveVector.lengthSq() > 0.01) {
-      this.targetDestination = null; // Keyboard/joystick overrides click destination
+      this.targetDestination = null;
     }
   }
 
@@ -198,7 +200,7 @@ export class LocalitySceneEngine {
     const time = this.clock.getElapsedTime();
 
     this.updateCharacterPhysics(delta, time);
-    this.updateCameraSystem(delta);
+    this.updateCameraSystem(delta, time);
     this.checkStationProximity();
 
     this.updateDecorations(time);
@@ -209,46 +211,45 @@ export class LocalitySceneEngine {
   };
 
   private updateCharacterPhysics(delta: number, time: number) {
-    const moveSpeed = 6.5; // meters per second
+    const moveSpeed = 6.5;
     let dx = 0;
     let dz = 0;
 
-    // Movement via direct input vector (joystick / WASD)
-    if (this.moveVector.lengthSq() > 0.01) {
-      dx = this.moveVector.x * moveSpeed * delta;
-      dz = this.moveVector.y * moveSpeed * delta;
-      this.isWalking = true;
-      this.charRotation = Math.atan2(dx, dz);
-    } else if (this.targetDestination) {
-      // Movement toward click destination
-      const toTarget = new THREE.Vector3().subVectors(this.targetDestination, this.charPos);
-      toTarget.y = 0;
-      const dist = toTarget.length();
-
-      if (dist > 0.4) {
-        toTarget.normalize();
-        dx = toTarget.x * moveSpeed * delta;
-        dz = toTarget.z * moveSpeed * delta;
+    if (this.cameraMode !== "story") {
+      if (this.moveVector.lengthSq() > 0.01) {
+        dx = this.moveVector.x * moveSpeed * delta;
+        dz = this.moveVector.y * moveSpeed * delta;
         this.isWalking = true;
-        this.charRotation = Math.atan2(toTarget.x, toTarget.z);
+        this.charRotation = Math.atan2(dx, dz);
+      } else if (this.targetDestination) {
+        const toTarget = new THREE.Vector3().subVectors(this.targetDestination, this.charPos);
+        toTarget.y = 0;
+        const dist = toTarget.length();
+
+        if (dist > 0.4) {
+          toTarget.normalize();
+          dx = toTarget.x * moveSpeed * delta;
+          dz = toTarget.z * moveSpeed * delta;
+          this.isWalking = true;
+          this.charRotation = Math.atan2(toTarget.x, toTarget.z);
+        } else {
+          this.targetDestination = null;
+          this.isWalking = false;
+        }
       } else {
-        this.targetDestination = null;
         this.isWalking = false;
       }
     } else {
       this.isWalking = false;
     }
 
-    // Apply translation with road boundaries clamp
     this.charPos.x = Math.max(-52, Math.min(52, this.charPos.x + dx));
     this.charPos.z = Math.max(-48, Math.min(42, this.charPos.z + dz));
 
-    // Update Aalekh Position & Rotation
     this.aalekh.root.position.set(this.charPos.x, 0, this.charPos.z);
     this.aalekh.root.rotation.y = this.charRotation;
     this.aalekh.updateAnimation(this.isWalking, time);
 
-    // Shirjana walks beside Aalekh with smooth damping
     const sanaTargetX = this.charPos.x + Math.cos(this.charRotation) * 1.2;
     const sanaTargetZ = this.charPos.z - Math.sin(this.charRotation) * 1.2;
     this.shirjana.root.position.x += (sanaTargetX - this.shirjana.root.position.x) * 0.15;
@@ -256,7 +257,6 @@ export class LocalitySceneEngine {
     this.shirjana.root.rotation.y = this.charRotation;
     this.shirjana.updateAnimation(this.isWalking, time);
 
-    // Bunny companion hops slightly behind
     const bunnyTargetX = this.charPos.x - Math.sin(this.charRotation) * 1.4;
     const bunnyTargetZ = this.charPos.z - Math.cos(this.charRotation) * 1.4;
     this.bunny.root.position.x += (bunnyTargetX - this.bunny.root.position.x) * 0.18;
@@ -265,11 +265,16 @@ export class LocalitySceneEngine {
     this.bunny.updateAnimation(this.isWalking, time);
   }
 
-  private updateCameraSystem(delta: number) {
-    const lerpFactor = Math.min(delta * 4.5, 1.0);
+  private updateCameraSystem(delta: number, time: number) {
+    const lerpFactor = Math.min(delta * 4.2, 1.0);
 
-    if (this.cameraMode === "exploration") {
-      // 3rd Person camera following smoothly behind character
+    if (this.cameraMode === "story") {
+      // Cinematic slow sweeping view across the illuminated Dattawadi neighbourhood
+      const sweepX = -10 + Math.sin(time * 0.15) * 6;
+      const sweepZ = 24 + Math.cos(time * 0.15) * 4;
+      this.targetCameraPos.set(sweepX, 15, sweepZ);
+      this.targetLookAt.set(0, 2.5, 0);
+    } else if (this.cameraMode === "exploration") {
       const camDist = 9.5;
       const camHeight = 5.2;
       this.targetCameraPos.set(
@@ -279,7 +284,6 @@ export class LocalitySceneEngine {
       );
       this.targetLookAt.set(this.charPos.x, 1.6, this.charPos.z);
     } else if (this.cameraMode === "closeup") {
-      // Intimate eye-level character angle
       this.targetCameraPos.set(
         this.charPos.x + 0.5,
         1.7,
@@ -287,21 +291,17 @@ export class LocalitySceneEngine {
       );
       this.targetLookAt.set(this.charPos.x + 0.6, 1.6, this.charPos.z);
     } else if (this.cameraMode === "street") {
-      // Dramatic low perspective looking down Dattawadi Main Road
-      this.targetCameraPos.set(this.charPos.x - 6, 1.2, this.charPos.z + 4);
-      this.targetLookAt.set(this.charPos.x + 10, 2.5, this.charPos.z - 5);
+      this.targetCameraPos.set(this.charPos.x - 6, 1.3, this.charPos.z + 4);
+      this.targetLookAt.set(this.charPos.x + 10, 2.6, this.charPos.z - 5);
     } else if (this.cameraMode === "birdeye") {
-      // High altitude overview of the entire Dattawadi road network
       this.targetCameraPos.set(0, 48, 25);
       this.targetLookAt.set(0, 0, 0);
     } else if (this.cameraMode === "lanternsky") {
-      // Follow Station C lantern rising to heaven
       const lanternPos = this.stations.stationC_LanternMesh.position;
       this.targetCameraPos.set(lanternPos.x - 8, Math.max(lanternPos.y - 2, 4), lanternPos.z + 10);
       this.targetLookAt.copy(lanternPos);
     }
 
-    // Smooth camera damping
     this.currentCameraPos.lerp(this.targetCameraPos, lerpFactor);
     this.currentLookAt.lerp(this.targetLookAt, lerpFactor);
 
@@ -328,4 +328,3 @@ export class LocalitySceneEngine {
     }
   }
 }
-
