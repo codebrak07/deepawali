@@ -270,3 +270,4 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
     updateDecorations,
   };
 }
+

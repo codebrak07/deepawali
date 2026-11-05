@@ -310,3 +310,4 @@ export const INTERACTIVE_STATIONS: StationLocation[] = [
     description: "Type a personal wish and launch a glowing 3D star lantern into the midnight sky above Akurdi.",
   },
 ];
+

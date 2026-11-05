@@ -188,3 +188,4 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
   scene.add(buildingsGroup);
   return buildingsGroup;
 }
+

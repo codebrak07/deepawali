@@ -114,9 +114,16 @@ export default function Page() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#060818]">
+    <div
+      className="relative w-screen h-screen overflow-hidden bg-[#060818]"
+      style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}
+    >
       {/* 3D WebGL Canvas Container (Occupies 100% of viewport) */}
-      <div ref={containerRef} className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing" />
+      <div
+        ref={containerRef}
+        className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
+        style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
+      />
 
       {/* Game HUD Overlay */}
       <GameOverlayUI

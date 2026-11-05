@@ -367,3 +367,4 @@ export function createBunnyCompanion(): BunnyRig {
 
   return { root, leftEar, rightEar, updateAnimation };
 }
+
