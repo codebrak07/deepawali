@@ -202,16 +202,19 @@ export default function Page() {
     if (stId === "station-exit-home") {
       engineRef.current?.exitBuilding();
       setIsInsideBuilding(false);
+      setNearbyStation(null);
       return;
     }
     if (stId === "station-enter-temple") {
       engineRef.current?.enterTemple();
       setIsInsideTemple(true);
+      setNearbyStation(null);
       return;
     }
     if (stId === "station-exit-temple") {
       engineRef.current?.exitTemple();
       setIsInsideTemple(false);
+      setNearbyStation(null);
       return;
     }
     if (stId === "station-temple-pray") {

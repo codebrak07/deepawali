@@ -170,6 +170,22 @@ export function GameOverlayUI({
 
           {/* Action Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Quick Exit to Street Button when inside any interior */}
+            {(isInsideBuilding || isInsideTemple) && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onInteractStation(isInsideTemple ? "station-exit-temple" : "station-exit-home");
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-rose-600 to-amber-600 text-white font-bold text-xs border border-rose-300 shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer animate-pulse"
+                title="Exit to Dattawadi Main Road"
+              >
+                <DoorOpen className="w-3.5 h-3.5 text-white" />
+                <span>Exit to Street</span>
+              </button>
+            )}
+
             {/* Mode Switcher: Storybook <-> Explore 3D */}
             <button
               onClick={onToggleMode}
@@ -237,9 +253,13 @@ export function GameOverlayUI({
       {/* CONTEXTUAL ACTION BUTTON (PROXIMITY BASED - ZERO "PRESS E") */}
       {/* ======================================================== */}
       {nearbyStation && isExploreMode && (
-        <div className="self-center pointer-events-auto my-auto animate-bounce">
+        <div className="self-center pointer-events-auto my-auto">
           <button
-            onClick={() => onInteractStation(nearbyStation)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onInteractStation(nearbyStation);
+            }}
             className="group px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-sm sm:text-base tracking-wider uppercase shadow-[0_0_40px_rgba(245,158,11,0.95)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 border-2 border-white cursor-pointer"
           >
             <ActionIcon className="w-5 h-5 text-slate-950 animate-pulse" />

@@ -64,8 +64,8 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
   const sharedFlameGeo = new THREE.ConeGeometry(0.08, 0.22, 5);
 
   LOCALITY_BUILDINGS.forEach((plot: BuildingPlot, bIdx: number) => {
-    // The Shiva Temple is custom rendered with authentic Nagara stone architecture & Shikhara spire
-    if (plot.id === "b-shiva-temple") return;
+    // Shiva Temple and Sana's Home are custom rendered enterable architectural suites
+    if (plot.id === "b-shiva-temple" || plot.id === "b-sana-home") return;
 
     const bldgGroup = new THREE.Group();
     bldgGroup.position.set(plot.x, 0, plot.z);

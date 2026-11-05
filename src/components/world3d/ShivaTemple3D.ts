@@ -579,3 +579,4 @@ export function createShivaTempleSystem(): TempleSceneObjects {
     updateAnimation,
   };
 }
+

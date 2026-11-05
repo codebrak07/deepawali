@@ -372,10 +372,25 @@ export class LocalitySceneEngine {
       this.interiorSuite.furnitureColliders,
       2.6
     );
-    this.charPos.copy(this.interiorSuite.entranceDoorPos);
+
+    // Place character inside facing north into living room
+    this.charPos.set(-20, 0, -8.5);
+    this.charRotation = Math.PI;
+
+    this.aalekh.root.position.copy(this.charPos);
+    this.shirjana.root.position.set(-18.8, 0, -8.3);
+    this.bunny.root.position.set(-21.1, 0, -8.1);
+
+    this.orbitYaw = 0; // Camera behind player facing into room
     this.orbitDistance = 3.8;
     this.orbitPitch = 0.22;
+    this.manualLookTimer = 0;
+
+    // Immediately snap camera
+    this.snapCameraToTarget(3.8, 0.22, 0);
+
     this.nearbyStation = null;
+    this.onProximityChange?.(null);
   }
 
   public exitBuilding() {
@@ -384,10 +399,25 @@ export class LocalitySceneEngine {
     this.collisionSystem.isInsideBuilding = false;
     this.collisionSystem.isInsideTemple = false;
     this.collisionSystem.buildExteriorColliders();
-    this.charPos.copy(this.interiorSuite.streetExitPos);
+
+    // Place character out on Dattawadi Main Road facing south
+    this.charPos.set(-20, 0, 0.5);
+    this.charRotation = 0;
+
+    this.aalekh.root.position.set(-20, 0, 0.5);
+    this.shirjana.root.position.set(-18.8, 0, 0.7);
+    this.bunny.root.position.set(-21.1, 0, 1.0);
+
+    this.orbitYaw = Math.PI; // Camera behind player looking along the street
     this.orbitDistance = 6.0;
     this.orbitPitch = 0.28;
+    this.manualLookTimer = 0;
+
+    // Immediately snap camera to street view so there is zero lerping through walls
+    this.snapCameraToTarget(6.0, 0.28, Math.PI);
+
     this.nearbyStation = null;
+    this.onProximityChange?.(null);
   }
 
   public enterTemple() {
@@ -400,10 +430,24 @@ export class LocalitySceneEngine {
       this.templeSuite.interiorColliders,
       3.6
     );
-    this.charPos.copy(this.templeSuite.entranceDoorPos);
+
+    // Place player inside sanctum facing north towards Shivling
+    this.charPos.set(14, 0, -24.5);
+    this.charRotation = Math.PI;
+
+    this.aalekh.root.position.set(14, 0, -24.5);
+    this.shirjana.root.position.set(15.2, 0, -24.3);
+    this.bunny.root.position.set(12.9, 0, -24.1);
+
+    this.orbitYaw = 0;
     this.orbitDistance = 4.5;
     this.orbitPitch = 0.25;
+    this.manualLookTimer = 0;
+
+    this.snapCameraToTarget(4.5, 0.25, 0);
+
     this.nearbyStation = null;
+    this.onProximityChange?.(null);
   }
 
   public exitTemple() {
@@ -412,10 +456,45 @@ export class LocalitySceneEngine {
     this.collisionSystem.isInsideBuilding = false;
     this.collisionSystem.isInsideTemple = false;
     this.collisionSystem.buildExteriorColliders();
-    this.charPos.copy(this.templeSuite.streetExitPos);
+
+    // Place player in temple courtyard / street in front of stone steps
+    this.charPos.set(14, 0, -17.5);
+    this.charRotation = 0;
+
+    this.aalekh.root.position.set(14, 0, -17.5);
+    this.shirjana.root.position.set(15.2, 0, -17.3);
+    this.bunny.root.position.set(12.8, 0, -17.0);
+
+    this.orbitYaw = Math.PI;
     this.orbitDistance = 6.0;
     this.orbitPitch = 0.28;
+    this.manualLookTimer = 0;
+
+    this.snapCameraToTarget(6.0, 0.28, Math.PI);
+
     this.nearbyStation = null;
+    this.onProximityChange?.(null);
+  }
+
+  private snapCameraToTarget(dist: number, pitch: number, yaw: number) {
+    const charHeadY = 1.6;
+    const cosPitch = Math.cos(pitch);
+    const sinPitch = Math.sin(pitch);
+    const sinYaw = Math.sin(yaw);
+    const cosYaw = Math.cos(yaw);
+
+    this.currentCameraPos.set(
+      this.charPos.x + sinYaw * cosPitch * dist,
+      Math.max(1.3, sinPitch * dist + charHeadY),
+      this.charPos.z + cosYaw * cosPitch * dist
+    );
+    this.targetCameraPos.copy(this.currentCameraPos);
+
+    this.currentLookAt.set(this.charPos.x, charHeadY, this.charPos.z);
+    this.targetLookAt.copy(this.currentLookAt);
+
+    this.camera.position.copy(this.currentCameraPos);
+    this.camera.lookAt(this.currentLookAt);
   }
 
   // Temple Sacred Actions
@@ -687,18 +766,18 @@ export class LocalitySceneEngine {
     const threshold = 4.2;
 
     if (this.isInsideBuilding) {
-      const distToExit = Math.hypot(this.charPos.x - (-20), this.charPos.z - (-7.5));
-      if (distToExit < 2.5) {
+      const distToExit = Math.hypot(this.charPos.x - (-20), this.charPos.z - (-8.5));
+      if (distToExit < 4.2 || this.charPos.z > -9.8) {
         nearest = "station-exit-home";
       }
     } else if (this.isInsideTemple) {
-      const distToExit = Math.hypot(this.charPos.x - 14, this.charPos.z - (-23.5));
+      const distToExit = Math.hypot(this.charPos.x - 14, this.charPos.z - (-24.5));
       const distToShivling = Math.hypot(this.charPos.x - 14, this.charPos.z - (-32.0));
       const distToFlowers = Math.hypot(this.charPos.x - 12.4, this.charPos.z - (-32.0));
       const distToBilva = Math.hypot(this.charPos.x - 15.6, this.charPos.z - (-32.0));
       const distToBell = Math.hypot(this.charPos.x - 14, this.charPos.z - (-27.8));
 
-      if (distToExit < 2.5) {
+      if (distToExit < 3.8 || this.charPos.z > -25.5) {
         nearest = "station-exit-temple";
       } else if (distToBell < 2.2) {
         nearest = "station-temple-bell";
