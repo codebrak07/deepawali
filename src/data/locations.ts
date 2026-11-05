@@ -305,3 +305,4 @@ export const BUILDINGS_LIGHTS: BuildingLightConfig[] = [
     diwaliBanner: "OUR FUTURE HOME 🏡❤️",
   },
 ];
+

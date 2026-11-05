@@ -155,3 +155,4 @@ export function ConstellationSky() {
     </div>
   );
 }
+

@@ -285,3 +285,4 @@ export const INITIAL_DIYAS_MESSAGES = [
   "You give the absolute warmest hugs.",
   "My dream is to celebrate every single Diwali with you.",
 ];
+

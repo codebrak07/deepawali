@@ -63,3 +63,4 @@ export function WelcomeLetterModal({ isOpen, onClose }: WelcomeLetterModalProps)
     </div>
   );
 }
+

@@ -15,3 +15,4 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = typeof window !== "undefined" ? getFirestore(app) : null;
 export default app;
+
