@@ -51,8 +51,8 @@ export class LocalitySceneEngine {
   // Camera Orbit Rig & State (GTA-Style calibrated defaults)
   public cameraMode: CameraViewMode = "story";
   public orbitYaw = 0; // Horizontal orbit around character (radians)
-  public orbitPitch = 0.28; // Vertical orbit inclination (radians)
-  public orbitDistance = 6.0; // Distance from character (5-7 world units)
+  public orbitPitch = 0.30; // Vertical orbit inclination (radians - calibrated for over-the-shoulder framing)
+  public orbitDistance = 8.5; // Comfortable GTA distance (8.5m in open world, never extreme close-up)
   public orbitSensitivity = 1.0;
   public invertPitch = false;
   public manualLookTimer = 0; // Pause auto-centering after user drags camera
@@ -158,8 +158,11 @@ export class LocalitySceneEngine {
       this.collisionSystem.registerOcclusionMesh(mesh)
     );
 
-    // Set initial exterior colliders
-    this.collisionSystem.buildExteriorColliders();
+    // Set initial exterior colliders (merging custom suites entrance colliders, excluding generic boxes)
+    this.collisionSystem.buildExteriorColliders([
+      ...this.templeSuite.exteriorColliders,
+      ...this.hanumanSuite.exteriorColliders,
+    ]);
 
     // 7. Interactive Waypoint 3D Beacon
     this.setupWaypointBeacon();
@@ -360,8 +363,8 @@ export class LocalitySceneEngine {
 
   public resetCamera() {
     this.orbitYaw = this.charRotation + Math.PI;
-    this.orbitPitch = this.isInsideBuilding ? 0.22 : 0.28;
-    this.orbitDistance = this.isInsideBuilding ? 3.8 : this.isInsideTemple ? 4.5 : 6.0;
+    this.orbitPitch = this.isInsideBuilding ? 0.22 : (this.isInsideTemple || this.isInsideHanuman) ? 0.25 : 0.30;
+    this.orbitDistance = this.isInsideBuilding ? 4.6 : (this.isInsideTemple || this.isInsideHanuman) ? 5.2 : 8.5;
     this.manualLookTimer = 0;
   }
 
@@ -410,25 +413,31 @@ export class LocalitySceneEngine {
   public exitBuilding() {
     this.isInsideBuilding = false;
     this.isInsideTemple = false;
+    this.isInsideHanuman = false;
     this.collisionSystem.isInsideBuilding = false;
     this.collisionSystem.isInsideTemple = false;
-    this.collisionSystem.buildExteriorColliders();
+    this.collisionSystem.isInsideHanuman = false;
+    this.collisionSystem.buildExteriorColliders([
+      ...this.templeSuite.exteriorColliders,
+      ...this.hanumanSuite.exteriorColliders,
+    ]);
 
-    // Place character out on Dattawadi Main Road facing south
-    this.charPos.set(-20, 0, 0.5);
+    // Place character out in the open street in front of Sana Residence
+    const safePos = this.collisionSystem.findSafeSpawnPosition(-20, 2.5, false);
+    this.charPos.set(safePos.x, 0, safePos.z);
     this.charRotation = 0;
 
-    this.aalekh.root.position.set(-20, 0, 0.5);
-    this.shirjana.root.position.set(-18.8, 0, 0.7);
-    this.bunny.root.position.set(-21.1, 0, 1.0);
+    this.aalekh.root.position.set(safePos.x, 0, safePos.z);
+    this.shirjana.root.position.set(safePos.x + 1.2, 0, safePos.z + 0.2);
+    this.bunny.root.position.set(safePos.x - 1.1, 0, safePos.z + 0.5);
 
     this.orbitYaw = Math.PI; // Camera behind player looking along the street
-    this.orbitDistance = 6.0;
-    this.orbitPitch = 0.28;
+    this.orbitDistance = 8.5;
+    this.orbitPitch = 0.30;
     this.manualLookTimer = 0;
 
     // Immediately snap camera to street view so there is zero lerping through walls
-    this.snapCameraToTarget(6.0, 0.28, Math.PI);
+    this.snapCameraToTarget(8.5, 0.30, Math.PI);
 
     this.nearbyStation = null;
     this.onProximityChange?.(null);
@@ -467,24 +476,30 @@ export class LocalitySceneEngine {
   public exitTemple() {
     this.isInsideBuilding = false;
     this.isInsideTemple = false;
+    this.isInsideHanuman = false;
     this.collisionSystem.isInsideBuilding = false;
     this.collisionSystem.isInsideTemple = false;
-    this.collisionSystem.buildExteriorColliders();
+    this.collisionSystem.isInsideHanuman = false;
+    this.collisionSystem.buildExteriorColliders([
+      ...this.templeSuite.exteriorColliders,
+      ...this.hanumanSuite.exteriorColliders,
+    ]);
 
-    // Place player in temple courtyard / street in front of stone steps
-    this.charPos.set(14, 0, -17.5);
+    // Place player in the open temple courtyard plaza (clear from steps and nearby buildings)
+    const safePos = this.collisionSystem.findSafeSpawnPosition(14, -18.5, false);
+    this.charPos.set(safePos.x, 0, safePos.z);
     this.charRotation = 0;
 
-    this.aalekh.root.position.set(14, 0, -17.5);
-    this.shirjana.root.position.set(15.2, 0, -17.3);
-    this.bunny.root.position.set(12.8, 0, -17.0);
+    this.aalekh.root.position.set(safePos.x, 0, safePos.z);
+    this.shirjana.root.position.set(safePos.x + 1.2, 0, safePos.z + 0.2);
+    this.bunny.root.position.set(safePos.x - 1.2, 0, safePos.z + 0.5);
 
     this.orbitYaw = Math.PI;
-    this.orbitDistance = 6.0;
-    this.orbitPitch = 0.28;
+    this.orbitDistance = 8.5;
+    this.orbitPitch = 0.30;
     this.manualLookTimer = 0;
 
-    this.snapCameraToTarget(6.0, 0.28, Math.PI);
+    this.snapCameraToTarget(8.5, 0.30, Math.PI);
 
     this.nearbyStation = null;
     this.onProximityChange?.(null);
@@ -495,7 +510,8 @@ export class LocalitySceneEngine {
     this.isInsideTemple = false;
     this.isInsideHanuman = true;
     this.collisionSystem.isInsideBuilding = false;
-    this.collisionSystem.isInsideTemple = true;
+    this.collisionSystem.isInsideTemple = false;
+    this.collisionSystem.isInsideHanuman = true;
     this.collisionSystem.setInteriorColliders(
       this.hanumanSuite.interiorBounds,
       this.hanumanSuite.interiorColliders,
@@ -527,22 +543,27 @@ export class LocalitySceneEngine {
     this.isInsideHanuman = false;
     this.collisionSystem.isInsideBuilding = false;
     this.collisionSystem.isInsideTemple = false;
-    this.collisionSystem.buildExteriorColliders();
+    this.collisionSystem.isInsideHanuman = false;
+    this.collisionSystem.buildExteriorColliders([
+      ...this.templeSuite.exteriorColliders,
+      ...this.hanumanSuite.exteriorColliders,
+    ]);
 
-    // Place player in front of Hanuman Mandir stone steps
-    this.charPos.set(-12, 0, -18.5);
+    // Place player in the open Hanuman Mandir plaza (free from collisions)
+    const safePos = this.collisionSystem.findSafeSpawnPosition(-12, -19.5, false);
+    this.charPos.set(safePos.x, 0, safePos.z);
     this.charRotation = 0;
 
-    this.aalekh.root.position.set(-12, 0, -18.5);
-    this.shirjana.root.position.set(-10.8, 0, -18.3);
-    this.bunny.root.position.set(-13.1, 0, -18.1);
+    this.aalekh.root.position.set(safePos.x, 0, safePos.z);
+    this.shirjana.root.position.set(safePos.x + 1.2, 0, safePos.z + 0.2);
+    this.bunny.root.position.set(safePos.x - 1.1, 0, safePos.z + 0.4);
 
     this.orbitYaw = Math.PI;
-    this.orbitDistance = 6.0;
-    this.orbitPitch = 0.28;
+    this.orbitDistance = 8.5;
+    this.orbitPitch = 0.30;
     this.manualLookTimer = 0;
 
-    this.snapCameraToTarget(6.0, 0.28, Math.PI);
+    this.snapCameraToTarget(8.5, 0.30, Math.PI);
 
     this.nearbyStation = null;
     this.onProximityChange?.(null);
@@ -781,9 +802,12 @@ export class LocalitySceneEngine {
     } else if (this.isInsideTemple) {
       this.charPos.x = Math.max(this.templeSuite.interiorBounds.minX + 0.4, Math.min(this.templeSuite.interiorBounds.maxX - 0.4, resolved.x));
       this.charPos.z = Math.max(this.templeSuite.interiorBounds.minZ + 0.4, Math.min(this.templeSuite.interiorBounds.maxZ - 0.4, resolved.z));
+    } else if (this.isInsideHanuman) {
+      this.charPos.x = Math.max(this.hanumanSuite.interiorBounds.minX + 0.4, Math.min(this.hanumanSuite.interiorBounds.maxX - 0.4, resolved.x));
+      this.charPos.z = Math.max(this.hanumanSuite.interiorBounds.minZ + 0.4, Math.min(this.hanumanSuite.interiorBounds.maxZ - 0.4, resolved.z));
     } else {
-      this.charPos.x = Math.max(-65, Math.min(65, resolved.x));
-      this.charPos.z = Math.max(-55, Math.min(50, resolved.z));
+      this.charPos.x = Math.max(-145, Math.min(145, resolved.x));
+      this.charPos.z = Math.max(-125, Math.min(105, resolved.z));
     }
 
     this.aalekh.root.position.set(this.charPos.x, 0, this.charPos.z);
@@ -837,8 +861,9 @@ export class LocalitySceneEngine {
       this.targetCameraPos.set(sweepX, 15, sweepZ);
       this.targetLookAt.set(0, 2.5, 0);
     } else if (this.cameraMode === "exploration") {
+      const isInterior = this.isInsideBuilding || this.isInsideTemple || this.isInsideHanuman;
       const charHeadY = 1.6;
-      const baseDist = this.isInsideBuilding ? 3.8 : this.isInsideTemple ? 4.5 : 6.0;
+      const baseDist = this.isInsideBuilding ? 4.6 : (this.isInsideTemple || this.isInsideHanuman) ? 5.2 : 8.5;
 
       const cosPitch = Math.cos(this.orbitPitch);
       const sinPitch = Math.sin(this.orbitPitch);
@@ -862,11 +887,12 @@ export class LocalitySceneEngine {
       );
 
       if (camCheck.hit) {
-        effectiveDist = Math.max(1.8, effectiveDist * camCheck.safeDistRatio);
+        const minSafeDist = isInterior ? 2.8 : 4.0;
+        effectiveDist = Math.max(minSafeDist, effectiveDist * camCheck.safeDistRatio);
       }
 
       const offsetX = sinYaw * cosPitch * effectiveDist;
-      const maxY = this.isInsideBuilding || this.isInsideTemple ? 3.8 : 25;
+      const maxY = isInterior ? 4.2 : 25;
       const offsetY = Math.max(1.2, Math.min(maxY, sinPitch * effectiveDist + charHeadY));
       const offsetZ = cosYaw * cosPitch * effectiveDist;
 

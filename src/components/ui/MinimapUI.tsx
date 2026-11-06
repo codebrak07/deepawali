@@ -42,14 +42,14 @@ export function MinimapUI({
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
-  // World bounds for mapping
-  const worldMinX = -75;
-  const worldMaxX = 75;
-  const worldMinZ = -65;
-  const worldMaxZ = 55;
+  // World bounds for mapping (Expanded to match full open-world coverage)
+  const worldMinX = -150;
+  const worldMaxX = 150;
+  const worldMinZ = -130;
+  const worldMaxZ = 110;
 
-  const worldWidth = worldMaxX - worldMinX; // 150m
-  const worldHeight = worldMaxZ - worldMinZ; // 120m
+  const worldWidth = worldMaxX - worldMinX; // 300m
+  const worldHeight = worldMaxZ - worldMinZ; // 240m
 
   // Coordinate transforms (Meters -> SVG Coordinates)
   const toSvgX = (x: number) => ((x - worldMinX) / worldWidth) * 300;
@@ -90,8 +90,8 @@ export function MinimapUI({
         {/* Outer Circular Border with Golden Festive Accent */}
         <div
           onClick={() => setIsExpanded(true)}
-          className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-2xl sm:rounded-full bg-[#08091a]/90 backdrop-blur-md border-2 border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.25)] overflow-hidden cursor-pointer transition-transform hover:scale-105 active:scale-95"
-          title="Live Locality Minimap • Tap to expand"
+          className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-[#08091a]/95 backdrop-blur-md border-2 border-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.35)] overflow-hidden cursor-pointer transition-transform hover:scale-105 active:scale-95"
+          title="Live Locality GPS Minimap • Tap to expand"
         >
           {/* Inner SVG Rendering */}
           <svg
@@ -412,7 +412,23 @@ export function MinimapUI({
                   const bd = (b.depth / worldHeight) * 240;
                   const isSanaHome = b.id === "b-sana-home";
                   const isHospital = b.id === "b-sai-hospital";
-                  const isTemple = b.id === "b-hanuman-mandir";
+                  const isHanuman = b.id === "b-hanuman-mandir";
+                  const isShiva = b.id === "b-shiva-temple";
+                  const isBazaar = b.id.startsWith("b-bazaar-");
+
+                  const fillColor = isShiva
+                    ? "#d97706"
+                    : isSanaHome
+                    ? "#f43f5e"
+                    : isHospital
+                    ? "#0284c7"
+                    : isHanuman
+                    ? "#ea580c"
+                    : isBazaar
+                    ? "#059669"
+                    : "#1e293b";
+
+                  const isLandmark = isSanaHome || isHospital || isHanuman || isShiva || isBazaar;
 
                   return (
                     <g key={b.id}>
@@ -421,22 +437,30 @@ export function MinimapUI({
                         y={by}
                         width={bw}
                         height={bd}
-                        fill={isSanaHome ? "#f43f5e" : isHospital ? "#0284c7" : isTemple ? "#ea580c" : "#1e293b"}
-                        stroke={isSanaHome || isHospital || isTemple ? "#f59e0b" : "#475569"}
-                        strokeWidth={isSanaHome || isHospital || isTemple ? "1.5" : "0.75"}
+                        fill={fillColor}
+                        stroke={isLandmark ? "#f59e0b" : "#475569"}
+                        strokeWidth={isLandmark ? "1.5" : "0.75"}
                         rx="1.5"
                       />
                       {/* Building Name Labels for Landmarks */}
-                      {(isSanaHome || isHospital || isTemple) && (
+                      {isLandmark && (
                         <text
                           x={bx + bw / 2}
-                          y={by + bd / 2 + 3}
-                          fontSize="5.5"
+                          y={by + bd / 2 + 2.5}
+                          fontSize="4.2"
                           fontWeight="bold"
                           fill="#ffffff"
                           textAnchor="middle"
                         >
-                          {isSanaHome ? "Sana's Home" : isHospital ? "Sai Hospital" : "Hanuman Mandir"}
+                          {isShiva
+                            ? "Shiva Temple"
+                            : isHanuman
+                            ? "Hanuman Mandir"
+                            : isSanaHome
+                            ? "Sana's Home"
+                            : isHospital
+                            ? "Sai Hospital"
+                            : b.name}
                         </text>
                       )}
                     </g>
@@ -495,6 +519,35 @@ export function MinimapUI({
                   <circle r="2.5" fill="#ffffff" />
                 </g>
               </svg>
+            </div>
+
+            {/* Quick Landmark Target Buttons */}
+            <div className="px-3 py-2 bg-[#0d0718] border-t border-amber-500/20 flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="text-amber-200/60 mr-1 font-serif">Quick GPS:</span>
+              <button
+                onClick={() => onSetWaypoint({ x: 14, z: -18 })}
+                className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 cursor-pointer"
+              >
+                🕉️ Shiva Temple
+              </button>
+              <button
+                onClick={() => onSetWaypoint({ x: -12, z: -18 })}
+                className="px-2 py-0.5 rounded bg-orange-500/15 hover:bg-orange-500/30 text-orange-200 border border-orange-500/40 cursor-pointer"
+              >
+                🚩 Hanuman Mandir
+              </button>
+              <button
+                onClick={() => onSetWaypoint({ x: -20, z: 2 })}
+                className="px-2 py-0.5 rounded bg-rose-500/15 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 cursor-pointer"
+              >
+                ❤️ Sana Residence
+              </button>
+              <button
+                onClick={() => onSetWaypoint({ x: 0, z: 65 })}
+                className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 cursor-pointer"
+              >
+                🏪 Dattawadi Bazaar
+              </button>
             </div>
 
             {/* Modal Footer with Waypoint Controls & Legend */}

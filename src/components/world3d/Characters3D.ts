@@ -269,29 +269,30 @@ export function createAalekhCharacter(): CharacterRig {
 
   // -----------------------------------------------------------------------
   // LEGS & FESTIVE JUTTIS (Churidar with tailored folds)
+  // Perfectly calibrated to ground y = 0.00 (Zero sinking / zero floating)
   // -----------------------------------------------------------------------
   const createLeg = (isLeft: boolean) => {
     const legGroup = new THREE.Group();
     const side = isLeft ? -1 : 1;
-    legGroup.position.set(side * 0.16, 0.72 * scale, 0);
+    legGroup.position.set(side * 0.16, 0.85 * scale, 0);
 
     // Thigh
     const thighGeo = new THREE.CylinderGeometry(0.12, 0.095, 0.42, 12);
     const thigh = new THREE.Mesh(thighGeo, pajamaMat);
-    thigh.position.y = -0.2;
+    thigh.position.y = -0.21;
     thigh.castShadow = true;
     legGroup.add(thigh);
 
     // Shin / Calf
     const calfGeo = new THREE.CylinderGeometry(0.095, 0.075, 0.42, 12);
     const calf = new THREE.Mesh(calfGeo, pajamaMat);
-    calf.position.y = -0.58;
+    calf.position.y = -0.63;
     calf.castShadow = true;
     legGroup.add(calf);
 
-    // Festive Mojari / Jutti with curved toe
+    // Festive Mojari / Jutti with curved toe (Sole perfectly rests at y = 0.00)
     const shoeGroup = new THREE.Group();
-    shoeGroup.position.set(0, -0.78, 0.04);
+    shoeGroup.position.set(0, -0.805, 0.04);
 
     const shoeBodyGeo = new THREE.BoxGeometry(0.14, 0.09, 0.28);
     const shoeBody = new THREE.Mesh(shoeBodyGeo, juttiMat);
@@ -327,8 +328,8 @@ export function createAalekhCharacter(): CharacterRig {
     if (sitting) {
       isPraying = false;
     } else {
-      leftLeg.position.set(-0.2, 0.72, 0);
-      rightLeg.position.set(0.2, 0.72, 0);
+      leftLeg.position.set(-0.16, 0.85, 0);
+      rightLeg.position.set(0.16, 0.85, 0);
     }
   };
 
@@ -357,15 +358,15 @@ export function createAalekhCharacter(): CharacterRig {
       const prayBreathe = Math.sin(time * 2.0) * 0.015;
       torso.position.y = 1.05 + prayBreathe;
       head.position.y = 1.62 + prayBreathe;
-      leftLeg.position.set(-0.2, 0.72, 0);
-      rightLeg.position.set(0.2, 0.72, 0);
+      leftLeg.position.set(-0.16, 0.85, 0);
+      rightLeg.position.set(0.16, 0.85, 0);
       leftLeg.rotation.set(0, 0, 0);
       rightLeg.rotation.set(0, 0, 0);
       return;
     }
 
-    leftLeg.position.set(-0.2, 0.72, 0);
-    rightLeg.position.set(0.2, 0.72, 0);
+    leftLeg.position.set(-0.16, 0.85, 0);
+    rightLeg.position.set(0.16, 0.85, 0);
 
     if (isWalking) {
       walkPhase += 0.18;

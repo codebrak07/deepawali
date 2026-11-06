@@ -5,8 +5,8 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): THREE.Group {
   const roadGroup = new THREE.Group();
   roadGroup.name = "roadNetworkGroup";
 
-  // 1. Overall Ground Terrain (warm midnight dark asphalt/earth)
-  const terrainGeo = new THREE.PlaneGeometry(240, 240);
+  // 1. Overall Ground Terrain (warm midnight dark asphalt/earth across expanded 320m x 280m open world)
+  const terrainGeo = new THREE.PlaneGeometry(380, 320);
   const terrainMat = new THREE.MeshStandardMaterial({
     color: 0x070b18,
     roughness: 0.95,
