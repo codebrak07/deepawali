@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { loadBoyCharacterModel, loadGirlCharacterModel } from "./CharacterModelLoader";
 
 export interface CharacterRig {
   root: THREE.Group;
@@ -76,12 +77,32 @@ export function createAalekhCharacter(): CharacterRig {
     roughness: 0.2,
   });
 
+  const proceduralGroup = new THREE.Group();
+  proceduralGroup.name = "proceduralAalekhRig";
+  root.add(proceduralGroup);
+
+  const customModelGroup = new THREE.Group();
+  customModelGroup.name = "customModelAalekhGroup";
+  customModelGroup.visible = false;
+  root.add(customModelGroup);
+
+  // Asynchronously load realistic 3D boy model from public/streetwear_86_full_body.glb
+  loadBoyCharacterModel()
+    .then((customModel) => {
+      customModelGroup.add(customModel);
+      customModelGroup.visible = true;
+      proceduralGroup.visible = false;
+    })
+    .catch((err) => {
+      console.warn("Using procedural Aalekh fallback rig:", err);
+    });
+
   // -----------------------------------------------------------------------
   // TORSO & UPPER BODY (Curved, tailored sherwani)
   // -----------------------------------------------------------------------
   const torso = new THREE.Group();
   torso.position.y = 1.05 * scale;
-  root.add(torso);
+  proceduralGroup.add(torso);
 
   // Chest & Midsection (tapered capsule/cylinder)
   const chestGeo = new THREE.CylinderGeometry(0.32, 0.28, 0.65, 16);
@@ -129,7 +150,7 @@ export function createAalekhCharacter(): CharacterRig {
   // -----------------------------------------------------------------------
   const head = new THREE.Group();
   head.position.set(0, 1.62 * scale, 0);
-  root.add(head);
+  proceduralGroup.add(head);
 
   // Neck
   const neckGeo = new THREE.CylinderGeometry(0.12, 0.13, 0.18, 12);
@@ -260,7 +281,7 @@ export function createAalekhCharacter(): CharacterRig {
     hand.position.set(0, -0.34, 0);
     forearmGroup.add(hand);
 
-    root.add(armGroup);
+    proceduralGroup.add(armGroup);
     return armGroup;
   };
 
@@ -305,7 +326,7 @@ export function createAalekhCharacter(): CharacterRig {
     shoeGroup.add(toe);
 
     legGroup.add(shoeGroup);
-    root.add(legGroup);
+    proceduralGroup.add(legGroup);
     return legGroup;
   };
 
@@ -334,6 +355,33 @@ export function createAalekhCharacter(): CharacterRig {
   };
 
   const updateAnimation = (isWalking: boolean, time: number) => {
+    // 1. Realistic 3D Model Procedural Animation
+    if (customModelGroup.visible) {
+      if (isSitting) {
+        // Comfortably seated on sofa/bed with natural recline
+        const sitBreath = Math.sin(time * 2.0) * 0.008;
+        customModelGroup.position.set(0, -0.42 + sitBreath, 0.12);
+        customModelGroup.rotation.set(0.12, 0, 0);
+      } else if (isPraying) {
+        // Reverent bow before sanctum
+        const prayBreath = Math.sin(time * 2.0) * 0.01;
+        customModelGroup.position.set(0, prayBreath, 0);
+        customModelGroup.rotation.set(0.18, 0, 0);
+      } else if (isWalking) {
+        walkPhase += 0.18;
+        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.055;
+        const tilt = Math.sin(walkPhase) * 0.035;
+        const sway = Math.cos(walkPhase) * 0.025;
+        customModelGroup.position.set(0, bounce, 0);
+        customModelGroup.rotation.set(tilt, sway * 0.5, sway);
+      } else {
+        const breath = Math.sin(time * 2.2) * 0.012;
+        customModelGroup.position.set(0, breath, 0);
+        customModelGroup.rotation.set(0, 0, 0);
+      }
+      return;
+    }
+
     if (isSitting) {
       // Natural Seated Pose on Sofa / Chair
       const sitBreath = Math.sin(time * 2.0) * 0.012;
@@ -451,12 +499,32 @@ export function createShirjanaCharacter(): CharacterRig {
 
   const flowerMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Jasmine Gajra
 
+  const proceduralGroup = new THREE.Group();
+  proceduralGroup.name = "proceduralSanaRig";
+  root.add(proceduralGroup);
+
+  const customModelGroup = new THREE.Group();
+  customModelGroup.name = "customModelSanaGroup";
+  customModelGroup.visible = false;
+  root.add(customModelGroup);
+
+  // Asynchronously load realistic 3D girl model (Sana) from public/
+  loadGirlCharacterModel()
+    .then((customModel) => {
+      customModelGroup.add(customModel);
+      customModelGroup.visible = true;
+      proceduralGroup.visible = false;
+    })
+    .catch((err) => {
+      console.warn("Using procedural Sana fallback rig:", err);
+    });
+
   // -----------------------------------------------------------------------
   // TORSO & CHOLI (Feminine silhouette with sweetheart neckline)
   // -----------------------------------------------------------------------
   const torso = new THREE.Group();
   torso.position.y = 1.05 * scale;
-  root.add(torso);
+  proceduralGroup.add(torso);
 
   // Choli (Tailored velvet blouse)
   const choliGeo = new THREE.CylinderGeometry(0.24, 0.21, 0.42, 16);
@@ -510,7 +578,7 @@ export function createShirjanaCharacter(): CharacterRig {
   // -----------------------------------------------------------------------
   const head = new THREE.Group();
   head.position.set(0, 1.58 * scale, 0);
-  root.add(head);
+  proceduralGroup.add(head);
 
   // Graceful neck
   const neckGeo = new THREE.CylinderGeometry(0.09, 0.11, 0.18, 12);
@@ -661,7 +729,7 @@ export function createShirjanaCharacter(): CharacterRig {
     hand.position.set(0, -0.3, 0);
     forearmGroup.add(hand);
 
-    root.add(armGroup);
+    proceduralGroup.add(armGroup);
     return armGroup;
   };
 
@@ -687,7 +755,7 @@ export function createShirjanaCharacter(): CharacterRig {
     payal.position.y = -0.62;
     legGroup.add(payal);
 
-    root.add(legGroup);
+    proceduralGroup.add(legGroup);
     return legGroup;
   };
 
@@ -713,6 +781,31 @@ export function createShirjanaCharacter(): CharacterRig {
   };
 
   const updateAnimation = (isWalking: boolean, time: number) => {
+    // 1. Realistic 3D Girl Model Procedural Animation
+    if (customModelGroup.visible) {
+      if (isSitting) {
+        const sitBreath = Math.sin(time * 2.0) * 0.008;
+        customModelGroup.position.set(0, -0.40 + sitBreath, 0.1);
+        customModelGroup.rotation.set(0.12, 0, 0);
+      } else if (isPraying) {
+        const prayBreath = Math.sin(time * 2.0) * 0.01;
+        customModelGroup.position.set(0, prayBreath, 0);
+        customModelGroup.rotation.set(0.18, 0, 0);
+      } else if (isWalking) {
+        walkPhase += 0.18;
+        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.048;
+        const tilt = Math.sin(walkPhase) * 0.03;
+        const sway = Math.cos(walkPhase) * 0.02;
+        customModelGroup.position.set(0, bounce, 0);
+        customModelGroup.rotation.set(tilt, sway * 0.5, sway);
+      } else {
+        const breath = Math.sin(time * 2.4) * 0.012;
+        customModelGroup.position.set(0, breath, 0);
+        customModelGroup.rotation.set(0, 0, 0);
+      }
+      return;
+    }
+
     if (isSitting) {
       // Natural Seated Pose for Sana
       const sitBreath = Math.sin(time * 2.0) * 0.01;
