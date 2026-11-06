@@ -12,8 +12,9 @@ import {
 import { createInteractiveStations, Station3DObjects } from "./InteractiveStations3D";
 import { INTERACTIVE_STATIONS } from "./LocalityData";
 import { LocalityCollisionSystem } from "./LocalityCollisionSystem";
-import { createSanaHomeInterior, InteriorSceneObjects } from "./BuildingInteriors3D";
+import { createSanaHomeInterior, InteriorSceneObjects, SeatAnchor } from "./BuildingInteriors3D";
 import { createShivaTempleSystem, TempleSceneObjects } from "./ShivaTemple3D";
+import { createHanumanTempleSystem, HanumanTempleSceneObjects } from "./HanumanTemple3D";
 
 export type CameraViewMode = "exploration" | "closeup" | "street" | "birdeye" | "lanternsky" | "story";
 
@@ -31,6 +32,7 @@ export class LocalitySceneEngine {
   private updateDecorations: (time: number) => void;
   public interiorSuite: InteriorSceneObjects;
   public templeSuite: TempleSceneObjects;
+  public hanumanSuite: HanumanTempleSceneObjects;
   public collisionSystem: LocalityCollisionSystem;
 
   // Character Physics & State
@@ -41,6 +43,10 @@ export class LocalitySceneEngine {
   public isWalking = false;
   public isInsideBuilding = false;
   public isInsideTemple = false;
+  public isInsideHanuman = false;
+  public isSitting = false;
+  public activeSeatAnchor: SeatAnchor | null = null;
+  public isWatchingTV = false;
 
   // Camera Orbit Rig & State (GTA-Style calibrated defaults)
   public cameraMode: CameraViewMode = "story";
@@ -144,13 +150,21 @@ export class LocalitySceneEngine {
       this.collisionSystem.registerOcclusionMesh(mesh)
     );
 
+    // 6. Build Dedicated Explorable Hanuman Temple (Exterior & Sanctum Interior)
+    this.hanumanSuite = createHanumanTempleSystem();
+    this.scene.add(this.hanumanSuite.exteriorGroup);
+    this.scene.add(this.hanumanSuite.interiorGroup);
+    this.hanumanSuite.occlusionMeshes.forEach((mesh) =>
+      this.collisionSystem.registerOcclusionMesh(mesh)
+    );
+
     // Set initial exterior colliders
     this.collisionSystem.buildExteriorColliders();
 
-    // 6. Interactive Waypoint 3D Beacon
+    // 7. Interactive Waypoint 3D Beacon
     this.setupWaypointBeacon();
 
-    // 7. Sculpted 3D Characters (Aalekh, Shirjana, Bunny Companion)
+    // 8. Sculpted 3D Characters (Aalekh, Shirjana, Bunny Companion)
     this.aalekh = createAalekhCharacter();
     this.shirjana = createShirjanaCharacter();
     this.bunny = createBunnyCompanion();
@@ -476,6 +490,153 @@ export class LocalitySceneEngine {
     this.onProximityChange?.(null);
   }
 
+  public enterHanuman() {
+    this.isInsideBuilding = false;
+    this.isInsideTemple = false;
+    this.isInsideHanuman = true;
+    this.collisionSystem.isInsideBuilding = false;
+    this.collisionSystem.isInsideTemple = true;
+    this.collisionSystem.setInteriorColliders(
+      this.hanumanSuite.interiorBounds,
+      this.hanumanSuite.interiorColliders,
+      3.2
+    );
+
+    // Place player inside Hanuman Mandir sanctum facing north towards idol
+    this.charPos.set(-12, 0, -25.5);
+    this.charRotation = Math.PI;
+
+    this.aalekh.root.position.set(-12, 0, -25.5);
+    this.shirjana.root.position.set(-10.8, 0, -25.3);
+    this.bunny.root.position.set(-13.1, 0, -25.1);
+
+    this.orbitYaw = 0;
+    this.orbitDistance = 4.2;
+    this.orbitPitch = 0.24;
+    this.manualLookTimer = 0;
+
+    this.snapCameraToTarget(4.2, 0.24, 0);
+
+    this.nearbyStation = null;
+    this.onProximityChange?.(null);
+  }
+
+  public exitHanuman() {
+    this.isInsideBuilding = false;
+    this.isInsideTemple = false;
+    this.isInsideHanuman = false;
+    this.collisionSystem.isInsideBuilding = false;
+    this.collisionSystem.isInsideTemple = false;
+    this.collisionSystem.buildExteriorColliders();
+
+    // Place player in front of Hanuman Mandir stone steps
+    this.charPos.set(-12, 0, -18.5);
+    this.charRotation = 0;
+
+    this.aalekh.root.position.set(-12, 0, -18.5);
+    this.shirjana.root.position.set(-10.8, 0, -18.3);
+    this.bunny.root.position.set(-13.1, 0, -18.1);
+
+    this.orbitYaw = Math.PI;
+    this.orbitDistance = 6.0;
+    this.orbitPitch = 0.28;
+    this.manualLookTimer = 0;
+
+    this.snapCameraToTarget(6.0, 0.28, Math.PI);
+
+    this.nearbyStation = null;
+    this.onProximityChange?.(null);
+  }
+
+  // Lifestyle & Seating Systems
+  public sitDown(anchorId?: string) {
+    const anchor =
+      this.interiorSuite.seatAnchors.find((a) => a.id === anchorId) ||
+      this.interiorSuite.seatAnchors[0];
+    if (!anchor) return;
+
+    this.isSitting = true;
+    this.activeSeatAnchor = anchor;
+    this.charPos.copy(anchor.position);
+    this.charRotation = anchor.rotationY;
+
+    this.aalekh.root.position.copy(this.charPos);
+    this.aalekh.root.rotation.y = this.charRotation;
+    this.aalekh.setSitting(true);
+
+    // Place Sana gracefully seated alongside
+    if (anchor.id === "seat-sofa-center") {
+      this.shirjana.root.position.set(anchor.position.x + 0.8, 0, anchor.position.z);
+      this.shirjana.root.rotation.y = anchor.rotationY;
+      this.shirjana.setSitting(true);
+    } else {
+      this.shirjana.root.position.set(anchor.position.x + 0.9, 0, anchor.position.z);
+      this.shirjana.root.rotation.y = anchor.rotationY;
+      this.shirjana.setSitting(true);
+    }
+
+    // Smooth camera framing for conversation and TV
+    this.orbitYaw = anchor.rotationY;
+    this.orbitDistance = 3.6;
+    this.orbitPitch = 0.22;
+    this.snapCameraToTarget(3.6, 0.22, anchor.rotationY);
+  }
+
+  public standUp() {
+    if (!this.isSitting) return;
+    this.isSitting = false;
+    this.isWatchingTV = false;
+    this.activeSeatAnchor = null;
+    this.aalekh.setSitting(false);
+    this.shirjana.setSitting(false);
+
+    // Step slightly forward from the seat
+    this.charPos.z += 0.8;
+    this.aalekh.root.position.copy(this.charPos);
+    this.shirjana.root.position.set(this.charPos.x + 1.1, 0, this.charPos.z);
+  }
+
+  public watchTV() {
+    if (!this.isSitting) {
+      this.sitDown("seat-sofa-center");
+    }
+    this.interiorSuite.toggleTV(true);
+    this.isWatchingTV = true;
+  }
+
+  public stopWatchingTV() {
+    this.isWatchingTV = false;
+  }
+
+  public nextTVChannel() {
+    this.interiorSuite.setTVChannel(1);
+  }
+
+  public toggleHomeLamps() {
+    return this.interiorSuite.toggleLamps();
+  }
+
+  // Sacred Temple Actions
+  public performAbhishek() {
+    this.templeSuite.performAbhishek();
+  }
+
+  public ringHanumanBell() {
+    this.hanumanSuite.ringBell();
+  }
+
+  public offerHanumanFlowers() {
+    this.hanumanSuite.offerFlowers();
+  }
+
+  public offerHanumanPrasad() {
+    this.hanumanSuite.offerPrasad();
+  }
+
+  public lightHanumanDiya() {
+    this.hanumanSuite.lightDiya();
+  }
+
   private snapCameraToTarget(dist: number, pitch: number, yaw: number) {
     const charHeadY = 1.6;
     const cosPitch = Math.cos(pitch);
@@ -553,6 +714,8 @@ export class LocalitySceneEngine {
     this.updateDecorations(time);
     this.stations.updateStations(time, this.rangoliProgress, this.lanternRising);
     this.templeSuite.updateAnimation(time);
+    this.hanumanSuite.updateAnimation(time);
+    this.interiorSuite.updateAnimation(time);
 
     // Animate Waypoint Beacon
     if (this.waypointBeaconGroup && this.waypointBeaconGroup.visible) {
@@ -571,7 +734,11 @@ export class LocalitySceneEngine {
   };
 
   private updateCharacterPhysics(delta: number, time: number) {
-    const moveSpeed = this.isInsideBuilding ? 5.2 : this.isInsideTemple ? 5.5 : 6.8;
+    if (this.isSitting && (Math.abs(this.moveVector.x) > 0.05 || Math.abs(this.moveVector.y) > 0.05)) {
+      this.standUp();
+    }
+
+    const moveSpeed = this.isInsideBuilding ? 5.2 : this.isInsideTemple || this.isInsideHanuman ? 5.5 : 6.8;
     let proposedDx = 0;
     let proposedDz = 0;
 
@@ -767,14 +934,49 @@ export class LocalitySceneEngine {
 
     if (this.isInsideBuilding) {
       const distToExit = Math.hypot(this.charPos.x - (-20), this.charPos.z - (-8.5));
-      if (distToExit < 4.2 || this.charPos.z > -9.8) {
+      const distToSofa = Math.hypot(this.charPos.x - (-23.8), this.charPos.z - (-15.3));
+      const distToTV = Math.hypot(this.charPos.x - (-23.8), this.charPos.z - (-20.2));
+      const distToBed = Math.hypot(this.charPos.x - (-14.8), this.charPos.z - (-16.0));
+      const distToPuja = Math.hypot(this.charPos.x - (-27.5), this.charPos.z - (-19.5));
+      const distToLamps = Math.hypot(this.charPos.x - (-12.6), this.charPos.z - (-21.0));
+
+      if (distToExit < 3.8 || this.charPos.z > -9.5) {
         nearest = "station-exit-home";
+      } else if (distToSofa < 2.5) {
+        nearest = "station-home-sofa";
+      } else if (distToTV < 3.2) {
+        nearest = "station-home-tv";
+      } else if (distToBed < 2.5) {
+        nearest = "station-home-bed";
+      } else if (distToPuja < 2.5) {
+        nearest = "station-home-puja";
+      } else if (distToLamps < 2.2) {
+        nearest = "station-home-lamps";
+      }
+    } else if (this.isInsideHanuman) {
+      const distToExit = Math.hypot(this.charPos.x - (-12), this.charPos.z - (-25.5));
+      const distToBell = Math.hypot(this.charPos.x - (-12), this.charPos.z - (-29.0));
+      const distToFlowers = Math.hypot(this.charPos.x - (-13.5), this.charPos.z - (-33.0));
+      const distToPrasad = Math.hypot(this.charPos.x - (-10.5), this.charPos.z - (-33.0));
+      const distToMurti = Math.hypot(this.charPos.x - (-12), this.charPos.z - (-33.2));
+
+      if (distToExit < 3.5 || this.charPos.z > -26.0) {
+        nearest = "station-exit-hanuman";
+      } else if (distToBell < 2.2) {
+        nearest = "station-hanuman-bell";
+      } else if (distToFlowers < 2.2) {
+        nearest = "station-hanuman-flowers";
+      } else if (distToPrasad < 2.2) {
+        nearest = "station-hanuman-prasad";
+      } else if (distToMurti < 3.2) {
+        nearest = "station-hanuman-pray";
       }
     } else if (this.isInsideTemple) {
       const distToExit = Math.hypot(this.charPos.x - 14, this.charPos.z - (-24.5));
       const distToShivling = Math.hypot(this.charPos.x - 14, this.charPos.z - (-32.0));
       const distToFlowers = Math.hypot(this.charPos.x - 12.4, this.charPos.z - (-32.0));
       const distToBilva = Math.hypot(this.charPos.x - 15.6, this.charPos.z - (-32.0));
+      const distToAbhishek = Math.hypot(this.charPos.x - 14, this.charPos.z - (-30.8));
       const distToBell = Math.hypot(this.charPos.x - 14, this.charPos.z - (-27.8));
 
       if (distToExit < 3.8 || this.charPos.z > -25.5) {
@@ -785,6 +987,8 @@ export class LocalitySceneEngine {
         nearest = "station-temple-flowers";
       } else if (distToBilva < 2.0) {
         nearest = "station-temple-bilva";
+      } else if (distToAbhishek < 2.2) {
+        nearest = "station-temple-abhishek";
       } else if (distToShivling < 3.2) {
         nearest = "station-temple-pray";
       }
@@ -792,7 +996,9 @@ export class LocalitySceneEngine {
       INTERACTIVE_STATIONS.forEach((st) => {
         if (
           st.id.startsWith("station-exit-") ||
-          (st.id.startsWith("station-temple-") && st.id !== "station-enter-temple")
+          (st.id.startsWith("station-temple-") && st.id !== "station-enter-temple") ||
+          (st.id.startsWith("station-hanuman-") && st.id !== "station-enter-hanuman") ||
+          (st.id.startsWith("station-home-") && st.id !== "station-enter-home")
         ) {
           return;
         }
@@ -807,8 +1013,11 @@ export class LocalitySceneEngine {
       this.nearbyStation = nearest;
       this.onProximityChange?.(this.nearbyStation);
 
-      // Trigger reverent prayer pose when in front of the holy Shivling
-      const isPraying = nearest === "station-temple-pray";
+      // Trigger reverent prayer pose when in front of sacred altars
+      const isPraying =
+        nearest === "station-temple-pray" ||
+        nearest === "station-hanuman-pray" ||
+        nearest === "station-home-puja";
       this.aalekh.setPraying(isPraying);
       this.shirjana.setPraying(isPraying);
     }

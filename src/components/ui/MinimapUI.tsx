@@ -25,6 +25,7 @@ interface MinimapUIProps {
   onSetWaypoint: (pos: { x: number; z: number } | null) => void;
   isInsideBuilding?: boolean;
   isInsideTemple?: boolean;
+  isInsideHanuman?: boolean;
 }
 
 export function MinimapUI({
@@ -34,6 +35,7 @@ export function MinimapUI({
   onSetWaypoint,
   isInsideBuilding = false,
   isInsideTemple = false,
+  isInsideHanuman = false,
 }: MinimapUIProps) {
   // Map mode: "rotating" (player faces up) vs "north-up" (geographical north up)
   const [mapMode, setMapMode] = useState<"rotating" | "north-up">("rotating");
@@ -190,11 +192,23 @@ export function MinimapUI({
                       x={toSvgX(b.x)}
                       y={toSvgY(b.z) + 3}
                       fill="#ffffff"
-                      fontSize="6"
+                      fontSize="5"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
-                      SHIVA TEMPLE 🕉️
+                      SHIVA 🕉️
+                    </text>
+                  )}
+                  {b.id === "b-hanuman-mandir" && (
+                    <text
+                      x={toSvgX(b.x)}
+                      y={toSvgY(b.z) + 3}
+                      fill="#ffffff"
+                      fontSize="5"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      HANUMAN 🚩
                     </text>
                   )}
                   {b.id === "b-sana-home" && (
@@ -202,7 +216,7 @@ export function MinimapUI({
                       x={toSvgX(b.x)}
                       y={toSvgY(b.z) + 3}
                       fill="#ffffff"
-                      fontSize="5.5"
+                      fontSize="5"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
@@ -272,6 +286,11 @@ export function MinimapUI({
           {isInsideTemple && (
             <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-amber-950/90 border border-amber-500/50 text-[9px] font-bold text-amber-200">
               Shiva Sanctum 🕉️
+            </div>
+          )}
+          {isInsideHanuman && (
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-orange-950/90 border border-orange-500/50 text-[9px] font-bold text-orange-200">
+              Hanuman Mandir 🚩
             </div>
           )}
         </div>

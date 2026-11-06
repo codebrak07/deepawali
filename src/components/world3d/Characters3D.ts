@@ -9,6 +9,7 @@ export interface CharacterRig {
   head: THREE.Group;
   torso: THREE.Group;
   setPraying: (praying: boolean) => void;
+  setSitting: (sitting: boolean) => void;
   updateAnimation: (isWalking: boolean, time: number) => void;
 }
 
@@ -311,16 +312,43 @@ export function createAalekhCharacter(): CharacterRig {
   const rightLeg = createLeg(false);
 
   // -----------------------------------------------------------------------
-  // ANIMATION & STATE (Walking, Idle Breathing, and Prayer Pose)
+  // ANIMATION & STATE (Walking, Idle Breathing, Prayer, and Natural Sitting)
   // -----------------------------------------------------------------------
   let walkPhase = 0;
   let isPraying = false;
+  let isSitting = false;
 
   const setPraying = (praying: boolean) => {
     isPraying = praying;
   };
 
+  const setSitting = (sitting: boolean) => {
+    isSitting = sitting;
+    if (sitting) {
+      isPraying = false;
+    } else {
+      leftLeg.position.set(-0.2, 0.72, 0);
+      rightLeg.position.set(0.2, 0.72, 0);
+    }
+  };
+
   const updateAnimation = (isWalking: boolean, time: number) => {
+    if (isSitting) {
+      // Natural Seated Pose on Sofa / Chair
+      const sitBreath = Math.sin(time * 2.0) * 0.012;
+      torso.position.y = 0.58 + sitBreath;
+      head.position.y = 1.15 + sitBreath;
+      leftLeg.position.set(-0.2, 0.48, 0.15);
+      rightLeg.position.set(0.2, 0.48, 0.15);
+      leftLeg.rotation.set(-Math.PI / 2, 0, 0);
+      rightLeg.rotation.set(-Math.PI / 2, 0, 0);
+      leftArm.rotation.set(0.65, 0.15, 0.2);
+      rightArm.rotation.set(0.65, -0.15, -0.2);
+      torso.rotation.set(0, 0, 0);
+      head.rotation.set(0.04, 0, 0);
+      return;
+    }
+
     if (isPraying) {
       // Namaste Prayer Pose
       leftArm.rotation.set(0.9, 0.45, 0.4);
@@ -329,10 +357,15 @@ export function createAalekhCharacter(): CharacterRig {
       const prayBreathe = Math.sin(time * 2.0) * 0.015;
       torso.position.y = 1.05 + prayBreathe;
       head.position.y = 1.62 + prayBreathe;
+      leftLeg.position.set(-0.2, 0.72, 0);
+      rightLeg.position.set(0.2, 0.72, 0);
       leftLeg.rotation.set(0, 0, 0);
       rightLeg.rotation.set(0, 0, 0);
       return;
     }
+
+    leftLeg.position.set(-0.2, 0.72, 0);
+    rightLeg.position.set(0.2, 0.72, 0);
 
     if (isWalking) {
       walkPhase += 0.18;
@@ -366,7 +399,7 @@ export function createAalekhCharacter(): CharacterRig {
     }
   };
 
-  return { root, leftLeg, rightLeg, leftArm, rightArm, head, torso, setPraying, updateAnimation };
+  return { root, leftLeg, rightLeg, leftArm, rightArm, head, torso, setPraying, setSitting, updateAnimation };
 }
 
 // =========================================================================
@@ -665,12 +698,35 @@ export function createShirjanaCharacter(): CharacterRig {
   // -----------------------------------------------------------------------
   let walkPhase = 0;
   let isPraying = false;
+  let isSitting = false;
 
   const setPraying = (praying: boolean) => {
     isPraying = praying;
   };
 
+  const setSitting = (sitting: boolean) => {
+    isSitting = sitting;
+    if (sitting) {
+      isPraying = false;
+    }
+  };
+
   const updateAnimation = (isWalking: boolean, time: number) => {
+    if (isSitting) {
+      // Natural Seated Pose for Sana
+      const sitBreath = Math.sin(time * 2.0) * 0.01;
+      torso.position.y = 0.54 + sitBreath;
+      head.position.y = 1.08 + sitBreath;
+      lehengaGroup.rotation.set(0.35, 0, 0);
+      leftLeg.rotation.set(-Math.PI / 2.2, 0, 0);
+      rightLeg.rotation.set(-Math.PI / 2.2, 0, 0);
+      leftArm.rotation.set(0.5, 0.2, 0.15);
+      rightArm.rotation.set(0.5, -0.2, -0.15);
+      torso.rotation.set(0, 0, 0);
+      head.rotation.set(0.04, 0, 0);
+      return;
+    }
+
     if (isPraying) {
       leftArm.rotation.set(0.85, 0.42, 0.35);
       rightArm.rotation.set(0.85, -0.42, -0.35);
@@ -712,7 +768,7 @@ export function createShirjanaCharacter(): CharacterRig {
     }
   };
 
-  return { root, leftLeg, rightLeg, leftArm, rightArm, head, torso, setPraying, updateAnimation };
+  return { root, leftLeg, rightLeg, leftArm, rightArm, head, torso, setPraying, setSitting, updateAnimation };
 }
 
 // =========================================================================

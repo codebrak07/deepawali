@@ -22,6 +22,12 @@ import {
   ZoomIn,
   ZoomOut,
   DoorOpen,
+  Tv,
+  Armchair,
+  Droplets,
+  Bell,
+  Sun,
+  Lightbulb,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -48,6 +54,17 @@ interface GameOverlayUIProps {
   onSetWaypoint: (pos: { x: number; z: number } | null) => void;
   isInsideBuilding?: boolean;
   isInsideTemple?: boolean;
+  isInsideHanuman?: boolean;
+  // Lifestyle simulation state
+  isSitting?: boolean;
+  isWatchingTV?: boolean;
+  tvChannelName?: string;
+  onSitDown?: (anchor?: string) => void;
+  onStandUp?: () => void;
+  onWatchTV?: () => void;
+  onStopWatchingTV?: () => void;
+  onNextTVChannel?: () => void;
+  onToggleLamps?: () => void;
 }
 
 export function GameOverlayUI({
@@ -72,6 +89,16 @@ export function GameOverlayUI({
   onSetWaypoint,
   isInsideBuilding = false,
   isInsideTemple = false,
+  isInsideHanuman = false,
+  isSitting = false,
+  isWatchingTV = false,
+  tvChannelName = "Diwali Live",
+  onSitDown,
+  onStandUp,
+  onWatchTV,
+  onStopWatchingTV,
+  onNextTVChannel,
+  onToggleLamps,
 }: GameOverlayUIProps) {
   const cameraPresets = [
     { id: "exploration", label: "Third Person", icon: Eye, tip: "Free Orbit Follow" },
@@ -81,46 +108,16 @@ export function GameOverlayUI({
   ];
 
   const fastTravelSpots = [
-    { id: "station-temple", name: "Shiva Temple", icon: Flame, x: 14, z: -21 },
+    { id: "station-shiva", name: "Shiva Temple", icon: Flame, x: 14, z: -21 },
+    { id: "station-hanuman", name: "Hanuman Mandir", icon: Sun, x: -12, z: -21 },
+    { id: "station-home", name: "Sana Home", icon: DoorOpen, x: -20, z: -7 },
     { id: "station-a", name: "Diyas", icon: Flame, x: 0, z: 8 },
     { id: "station-b", name: "Rangoli", icon: Palette, x: 0, z: -24 },
     { id: "station-c", name: "Lantern", icon: Send, x: 30, z: 0 },
-    { id: "station-home", name: "Sana Home", icon: DoorOpen, x: -20, z: -7 },
   ];
 
   // Active contextual station info
   const activeStationInfo = INTERACTIVE_STATIONS.find((s) => s.id === nearbyStation);
-
-  // Contextual action button title
-  let actionTitle = activeStationInfo?.actionButton || "✨ EXPLORE ACTIVITY";
-  let actionIcon = Sparkles;
-  if (nearbyStation === "station-enter-home") {
-    actionTitle = "🚪 ENTER SANA'S HOME";
-    actionIcon = DoorOpen;
-  } else if (nearbyStation === "station-exit-home") {
-    actionTitle = "🚪 EXIT TO STREET";
-    actionIcon = DoorOpen;
-  } else if (nearbyStation === "station-enter-temple") {
-    actionTitle = "🕉️ ENTER SHIVA TEMPLE";
-    actionIcon = Sparkles;
-  } else if (nearbyStation === "station-exit-temple") {
-    actionTitle = "🚪 EXIT TEMPLE";
-    actionIcon = DoorOpen;
-  } else if (nearbyStation === "station-temple-pray") {
-    actionTitle = "🙏 PRAY / PRANAM";
-    actionIcon = Heart;
-  } else if (nearbyStation === "station-temple-flowers") {
-    actionTitle = "🌸 OFFER FLOWERS";
-    actionIcon = Sparkles;
-  } else if (nearbyStation === "station-temple-bilva") {
-    actionTitle = "🌿 OFFER BILVA LEAVES";
-    actionIcon = Sparkles;
-  } else if (nearbyStation === "station-temple-bell") {
-    actionTitle = "🔔 RING TEMPLE BELL";
-    actionIcon = Sparkles;
-  }
-
-  const ActionIcon = actionIcon;
 
   return (
     <div className="fixed inset-0 pointer-events-none select-none z-30 flex flex-col justify-between p-2.5 sm:p-5">
@@ -137,6 +134,7 @@ export function GameOverlayUI({
             onSetWaypoint={onSetWaypoint}
             isInsideBuilding={isInsideBuilding}
             isInsideTemple={isInsideTemple}
+            isInsideHanuman={isInsideHanuman}
           />
         </div>
 
@@ -152,16 +150,20 @@ export function GameOverlayUI({
                 <span>
                   {isInsideTemple
                     ? "Shiva Temple Sanctum"
+                    : isInsideHanuman
+                    ? "Hanuman Mandir Sanctum"
                     : isInsideBuilding
-                    ? "Sana's Home Interior"
+                    ? "Sana's Luxury Residence"
                     : "Sana's Open World"}
                 </span>
                 <span className="text-[10px] text-amber-300 font-normal hidden md:inline">
                   •{" "}
                   {isInsideTemple
                     ? "Consecrated Shivling & Abhishek"
+                    : isInsideHanuman
+                    ? "Heroic Murti & Sacred Gada"
                     : isInsideBuilding
-                    ? "Living Room & Pooja Corner"
+                    ? "Living Suite & OLED TV"
                     : "Dattawadi, Akurdi (Pune)"}
                 </span>
               </span>
@@ -171,12 +173,18 @@ export function GameOverlayUI({
           {/* Action Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Quick Exit to Street Button when inside any interior */}
-            {(isInsideBuilding || isInsideTemple) && (
+            {(isInsideBuilding || isInsideTemple || isInsideHanuman) && (
               <button
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onInteractStation(isInsideTemple ? "station-exit-temple" : "station-exit-home");
+                  onInteractStation(
+                    isInsideTemple
+                      ? "station-exit-temple"
+                      : isInsideHanuman
+                      ? "station-exit-hanuman"
+                      : "station-exit-home"
+                  );
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-rose-600 to-amber-600 text-white font-bold text-xs border border-rose-300 shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer animate-pulse"
                 title="Exit to Dattawadi Main Road"
@@ -250,32 +258,316 @@ export function GameOverlayUI({
       </div>
 
       {/* ======================================================== */}
-      {/* CONTEXTUAL ACTION BUTTON (PROXIMITY BASED - ZERO "PRESS E") */}
-      {/* ======================================================== */}
-      {nearbyStation && isExploreMode && (
-        <div className="self-center pointer-events-auto my-auto">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onInteractStation(nearbyStation);
-            }}
-            className="group px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-sm sm:text-base tracking-wider uppercase shadow-[0_0_40px_rgba(245,158,11,0.95)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 border-2 border-white cursor-pointer"
-          >
-            <ActionIcon className="w-5 h-5 text-slate-950 animate-pulse" />
-            <span>{actionTitle}</span>
-          </button>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* EXPLORE MODE CONTROLS: DUAL JOYSTICKS & CAMERA TOOLS */}
+      {/* EXPLORE MODE: DOCKED CONTEXTUAL ACTION BAR + DUAL JOYSTICKS */}
       {/* ======================================================== */}
       {isExploreMode && (
-        <div className="flex flex-col gap-2 pointer-events-none">
-          {/* CAMERA TOOLS & PRESETS (TOP OF CONTROLS) */}
+        <div className="flex flex-col gap-2.5 pointer-events-none mt-auto">
+          {/* ======================================================== */}
+          {/* DOCKED CONTEXTUAL ACTION BAR (AGENCY-GRADE COMPACT HUD) */}
+          {/* ======================================================== */}
+          <div className="self-center flex flex-wrap items-center justify-center gap-2 pointer-events-auto max-w-[95vw]">
+            {/* 1. SEATED CONTROLS (WHEN SITTING) */}
+            {isSitting && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#130624]/95 backdrop-blur-md border border-amber-400/60 shadow-[0_0_25px_rgba(245,158,11,0.4)] animate-fadeIn">
+                <button
+                  onClick={onStandUp}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
+                >
+                  <DoorOpen className="w-3.5 h-3.5" />
+                  <span>Stand Up</span>
+                </button>
+
+                {isWatchingTV ? (
+                  <>
+                    <button
+                      onClick={onNextTVChannel}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
+                      title="Next Channel"
+                    >
+                      <Tv className="w-3.5 h-3.5" />
+                      <span>Channel: {tvChannelName}</span>
+                    </button>
+                    <button
+                      onClick={onStopWatchingTV}
+                      className="px-2.5 py-1 rounded-full bg-rose-600/80 text-white font-semibold text-xs hover:bg-rose-600 transition-colors cursor-pointer"
+                    >
+                      Turn Off
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={onWatchTV}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-600 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
+                  >
+                    <Tv className="w-3.5 h-3.5" />
+                    <span>Watch TV</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 2. LIVING ROOM LIFESTYLE ACTIONS (NEAR SOFA / TV / BED) */}
+            {!isSitting && isInsideBuilding && nearbyStation && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#130624]/95 backdrop-blur-md border border-amber-400/50 shadow-xl animate-fadeIn">
+                {nearbyStation === "station-home-sofa" && (
+                  <>
+                    <button
+                      onClick={() => onSitDown?.("seat-sofa-center")}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Armchair className="w-3.5 h-3.5" />
+                      <span>Sit on Sofa</span>
+                    </button>
+                    <button
+                      onClick={onWatchTV}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-600 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Tv className="w-3.5 h-3.5" />
+                      <span>Watch TV</span>
+                    </button>
+                  </>
+                )}
+
+                {nearbyStation === "station-home-tv" && (
+                  <>
+                    <button
+                      onClick={onWatchTV}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-sky-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Tv className="w-3.5 h-3.5" />
+                      <span>Watch TV</span>
+                    </button>
+                    <button
+                      onClick={() => onSitDown?.("seat-sofa-center")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 text-amber-200 border border-amber-500/30 text-xs font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Armchair className="w-3.5 h-3.5" />
+                      <span>Sit Down</span>
+                    </button>
+                  </>
+                )}
+
+                {nearbyStation === "station-home-bed" && (
+                  <button
+                    onClick={() => onSitDown?.("seat-bed")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Heart className="w-3.5 h-3.5" />
+                    <span>Sit on Bed</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-home-puja" && (
+                  <button
+                    onClick={() => onInteractStation("station-home-puja")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Heart className="w-3.5 h-3.5" />
+                    <span>Offer Puja</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-home-lamps" && (
+                  <button
+                    onClick={onToggleLamps}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    <span>Toggle Lamps</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-exit-home" && (
+                  <button
+                    onClick={() => onInteractStation("station-exit-home")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 to-amber-600 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <DoorOpen className="w-3.5 h-3.5" />
+                    <span>Exit to Street</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 3. SHIVA TEMPLE SACRED ACTIONS */}
+            {isInsideTemple && nearbyStation && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#130624]/95 backdrop-blur-md border border-amber-400/50 shadow-xl animate-fadeIn">
+                {nearbyStation === "station-temple-pray" && (
+                  <>
+                    <button
+                      onClick={() => onInteractStation("station-temple-pray")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Heart className="w-3.5 h-3.5 text-rose-950" />
+                      <span>Pray / Pranam</span>
+                    </button>
+                    <button
+                      onClick={() => onInteractStation("station-temple-flowers")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Flowers</span>
+                    </button>
+                    <button
+                      onClick={() => onInteractStation("station-temple-bilva")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Bilva Leaves</span>
+                    </button>
+                    <button
+                      onClick={() => onInteractStation("station-temple-abhishek")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-400 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Droplets className="w-3.5 h-3.5" />
+                      <span>Abhishek</span>
+                    </button>
+                  </>
+                )}
+
+                {nearbyStation === "station-temple-flowers" && (
+                  <button
+                    onClick={() => onInteractStation("station-temple-flowers")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Offer Flowers 🌸</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-temple-bilva" && (
+                  <button
+                    onClick={() => onInteractStation("station-temple-bilva")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Offer Bilva Leaves 🌿</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-temple-abhishek" && (
+                  <button
+                    onClick={() => onInteractStation("station-temple-abhishek")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-sky-400 to-blue-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Droplets className="w-3.5 h-3.5" />
+                    <span>Perform Abhishek 💧</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-temple-bell" && (
+                  <button
+                    onClick={() => onInteractStation("station-temple-bell")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>Ring Temple Bell 🔔</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-exit-temple" && (
+                  <button
+                    onClick={() => onInteractStation("station-exit-temple")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 to-amber-600 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <DoorOpen className="w-3.5 h-3.5" />
+                    <span>Exit Temple</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 4. HANUMAN MANDIR SACRED ACTIONS */}
+            {isInsideHanuman && nearbyStation && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#130624]/95 backdrop-blur-md border border-orange-400/50 shadow-xl animate-fadeIn">
+                {nearbyStation === "station-hanuman-pray" && (
+                  <>
+                    <button
+                      onClick={() => onInteractStation("station-hanuman-pray")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Heart className="w-3.5 h-3.5 text-rose-950" />
+                      <span>Pray / Pranam</span>
+                    </button>
+                    <button
+                      onClick={() => onInteractStation("station-hanuman-flowers")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Marigolds</span>
+                    </button>
+                    <button
+                      onClick={() => onInteractStation("station-hanuman-prasad")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Prasad</span>
+                    </button>
+                  </>
+                )}
+
+                {nearbyStation === "station-hanuman-flowers" && (
+                  <button
+                    onClick={() => onInteractStation("station-hanuman-flowers")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Offer Marigold Mala 🌸</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-hanuman-prasad" && (
+                  <button
+                    onClick={() => onInteractStation("station-hanuman-prasad")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-orange-400 to-rose-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Offer Sacred Prasad 🍬</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-hanuman-bell" && (
+                  <button
+                    onClick={() => onInteractStation("station-hanuman-bell")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>Ring Mandir Bell 🔔</span>
+                  </button>
+                )}
+
+                {nearbyStation === "station-exit-hanuman" && (
+                  <button
+                    onClick={() => onInteractStation("station-exit-hanuman")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 to-amber-600 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <DoorOpen className="w-3.5 h-3.5" />
+                    <span>Exit Temple</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 5. OUTDOOR STREET STATIONS */}
+            {!isInsideBuilding &&
+              !isInsideTemple &&
+              !isInsideHanuman &&
+              nearbyStation &&
+              activeStationInfo && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#130624]/95 backdrop-blur-md border border-amber-400/50 shadow-xl animate-fadeIn">
+                  <button
+                    onClick={() => onInteractStation(nearbyStation)}
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-md"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                    <span>{activeStationInfo.actionButton}</span>
+                  </button>
+                </div>
+              )}
+          </div>
+
+          {/* CAMERA TOOLS & PRESETS */}
           <div className="self-center flex flex-wrap items-center justify-center gap-1.5 p-1 rounded-full bg-[#150a24]/90 backdrop-blur-md border border-amber-500/40 shadow-2xl pointer-events-auto">
-            {/* Camera Presets */}
             {cameraPresets.map((cm) => {
               const Icon = cm.icon;
               const isActive = cameraMode === cm.id;
@@ -342,11 +634,11 @@ export function GameOverlayUI({
               {/* Desktop hint */}
               <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#150a24]/85 border border-slate-800 text-slate-300 text-xs">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <span>WASD: Move • Mouse Drag: Look Orbit • Tap Minimap: Set Waypoint</span>
+                <span>WASD: Move • Mouse Drag: Orbit • Tap Minimap: GPS Waypoint</span>
               </div>
 
               {/* Fast Travel Shortcuts */}
-              <div className="flex items-center gap-1 bg-[#150a24]/90 backdrop-blur-md p-1 rounded-2xl border border-amber-500/40 shadow-xl">
+              <div className="flex items-center gap-1 bg-[#150a24]/90 backdrop-blur-md p-1 rounded-2xl border border-amber-500/40 shadow-xl overflow-x-auto max-w-full">
                 <span className="text-[10px] text-amber-300 font-bold px-1.5 hidden sm:inline">
                   Fast Travel:
                 </span>
@@ -356,7 +648,7 @@ export function GameOverlayUI({
                     <button
                       key={st.id}
                       onClick={() => onTeleport(st.x, st.z)}
-                      className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-amber-100 text-[11px] font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-amber-100 text-[11px] font-semibold hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <Icon className="w-3 h-3 text-amber-400" />
                       <span>{st.name}</span>
@@ -370,9 +662,9 @@ export function GameOverlayUI({
             <div className="flex flex-col items-end">
               <VirtualJoystick
                 onMove={onLookJoystickMove}
-                label="LOOK"
+                label="CAMERA"
                 subLabel="DRAG"
-                accent="cyan"
+                accent="rose"
               />
             </div>
           </div>

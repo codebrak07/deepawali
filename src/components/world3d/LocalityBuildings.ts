@@ -64,8 +64,8 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
   const sharedFlameGeo = new THREE.ConeGeometry(0.08, 0.22, 5);
 
   LOCALITY_BUILDINGS.forEach((plot: BuildingPlot, bIdx: number) => {
-    // Shiva Temple and Sana's Home are custom rendered enterable architectural suites
-    if (plot.id === "b-shiva-temple" || plot.id === "b-sana-home") return;
+    // Shiva Temple, Hanuman Temple and Sana's Home are custom rendered enterable architectural suites
+    if (plot.id === "b-shiva-temple" || plot.id === "b-sana-home" || plot.id === "b-hanuman-mandir") return;
 
     const bldgGroup = new THREE.Group();
     bldgGroup.position.set(plot.x, 0, plot.z);

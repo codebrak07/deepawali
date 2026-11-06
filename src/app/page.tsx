@@ -29,6 +29,10 @@ export default function Page() {
   const [waypoint, setWaypoint] = useState<{ x: number; z: number } | null>(null);
   const [isInsideBuilding, setIsInsideBuilding] = useState<boolean>(false);
   const [isInsideTemple, setIsInsideTemple] = useState<boolean>(false);
+  const [isInsideHanuman, setIsInsideHanuman] = useState<boolean>(false);
+  const [isSitting, setIsSitting] = useState<boolean>(false);
+  const [isWatchingTV, setIsWatchingTV] = useState<boolean>(false);
+  const [tvChannelName, setTvChannelName] = useState<string>("Diwali Live");
 
   // Initialize 3D Engine on mount
   useEffect(() => {
@@ -46,6 +50,10 @@ export default function Page() {
       setPlayerHeading(heading);
       setIsInsideBuilding(engine.isInsideBuilding);
       setIsInsideTemple(engine.isInsideTemple);
+      setIsInsideHanuman(engine.isInsideHanuman);
+      setIsSitting(engine.isSitting);
+      setIsWatchingTV(engine.isWatchingTV);
+      setTvChannelName(engine.interiorSuite.getTVChannelName());
     };
 
     engine.onWaypointChange = (wp) => {
@@ -91,6 +99,12 @@ export default function Page() {
         } else if (engine.nearbyStation === "station-exit-temple") {
           engine.exitTemple();
           setIsInsideTemple(false);
+        } else if (engine.nearbyStation === "station-enter-hanuman") {
+          engine.enterHanuman();
+          setIsInsideHanuman(true);
+        } else if (engine.nearbyStation === "station-exit-hanuman") {
+          engine.exitHanuman();
+          setIsInsideHanuman(false);
         } else if (engine.nearbyStation === "station-temple-pray") {
           soundManager.playDiyaChime();
         } else if (engine.nearbyStation === "station-temple-bell") {
@@ -102,6 +116,30 @@ export default function Page() {
         } else if (engine.nearbyStation === "station-temple-bilva") {
           engine.offerTempleBilvaLeaves();
           soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-temple-abhishek") {
+          engine.performAbhishek();
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-hanuman-pray") {
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-hanuman-bell") {
+          engine.ringHanumanBell();
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-hanuman-flowers") {
+          engine.offerHanumanFlowers();
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-hanuman-prasad") {
+          engine.offerHanumanPrasad();
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-home-sofa") {
+          engine.sitDown("seat-sofa-center");
+        } else if (engine.nearbyStation === "station-home-tv") {
+          engine.watchTV();
+        } else if (engine.nearbyStation === "station-home-bed") {
+          engine.sitDown("seat-bed");
+        } else if (engine.nearbyStation === "station-home-puja") {
+          soundManager.playDiyaChime();
+        } else if (engine.nearbyStation === "station-home-lamps") {
+          engine.toggleHomeLamps();
         } else if (engine.nearbyStation === "station-surprise") {
           setShowFinalSurprise(true);
         } else {
@@ -217,6 +255,18 @@ export default function Page() {
       setNearbyStation(null);
       return;
     }
+    if (stId === "station-enter-hanuman") {
+      engineRef.current?.enterHanuman();
+      setIsInsideHanuman(true);
+      setNearbyStation(null);
+      return;
+    }
+    if (stId === "station-exit-hanuman") {
+      engineRef.current?.exitHanuman();
+      setIsInsideHanuman(false);
+      setNearbyStation(null);
+      return;
+    }
     if (stId === "station-temple-pray") {
       soundManager.playDiyaChime();
       return;
@@ -234,6 +284,50 @@ export default function Page() {
     if (stId === "station-temple-bilva") {
       engineRef.current?.offerTempleBilvaLeaves();
       soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-temple-abhishek") {
+      engineRef.current?.performAbhishek();
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-hanuman-pray") {
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-hanuman-bell") {
+      engineRef.current?.ringHanumanBell();
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-hanuman-flowers") {
+      engineRef.current?.offerHanumanFlowers();
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-hanuman-prasad") {
+      engineRef.current?.offerHanumanPrasad();
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-home-sofa") {
+      engineRef.current?.sitDown("seat-sofa-center");
+      return;
+    }
+    if (stId === "station-home-tv") {
+      engineRef.current?.watchTV();
+      return;
+    }
+    if (stId === "station-home-bed") {
+      engineRef.current?.sitDown("seat-bed");
+      return;
+    }
+    if (stId === "station-home-puja") {
+      soundManager.playDiyaChime();
+      return;
+    }
+    if (stId === "station-home-lamps") {
+      engineRef.current?.toggleHomeLamps();
       return;
     }
     if (stId === "station-surprise") {
@@ -315,6 +409,16 @@ export default function Page() {
           onSetWaypoint={handleSetWaypoint}
           isInsideBuilding={isInsideBuilding}
           isInsideTemple={isInsideTemple}
+          isInsideHanuman={isInsideHanuman}
+          isSitting={isSitting}
+          isWatchingTV={isWatchingTV}
+          tvChannelName={tvChannelName}
+          onSitDown={(anchor) => engineRef.current?.sitDown(anchor)}
+          onStandUp={() => engineRef.current?.standUp()}
+          onWatchTV={() => engineRef.current?.watchTV()}
+          onStopWatchingTV={() => engineRef.current?.stopWatchingTV()}
+          onNextTVChannel={() => engineRef.current?.nextTVChannel()}
+          onToggleLamps={() => engineRef.current?.toggleHomeLamps()}
         />
       )}
 
