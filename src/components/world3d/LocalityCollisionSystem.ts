@@ -144,9 +144,8 @@ export class LocalityCollisionSystem {
     dx: number,
     dz: number
   ): { x: number; z: number; hitWall: boolean } {
-    const colliders = this.isInsideBuilding || this.isInsideTemple
-      ? this.interiorColliders
-      : this.exteriorColliders;
+    const isInterior = this.isInsideBuilding || this.isInsideTemple || this.isInsideHanuman;
+    const colliders = isInterior ? this.interiorColliders : this.exteriorColliders;
     const r = this.playerRadius;
 
     // Sub-stepping for continuous collision detection (prevents tunneling through thin walls)
@@ -265,9 +264,8 @@ export class LocalityCollisionSystem {
     targetY: number,
     targetZ: number
   ): { hit: boolean; safeDistRatio: number } {
-    const colliders = this.isInsideBuilding || this.isInsideTemple
-      ? this.interiorColliders
-      : this.exteriorColliders;
+    const isInterior = this.isInsideBuilding || this.isInsideTemple || this.isInsideHanuman;
+    const colliders = isInterior ? this.interiorColliders : this.exteriorColliders;
     const steps = 14;
     const padding = 0.28;
 
@@ -278,7 +276,7 @@ export class LocalityCollisionSystem {
       const testZ = startZ + (targetZ - startZ) * t;
 
       // Ceiling check for interior rooms
-      if ((this.isInsideBuilding || this.isInsideTemple) && testY > 3.9) {
+      if (isInterior && testY > 3.9) {
         return { hit: true, safeDistRatio: Math.max(0.45, (s - 1) / steps) };
       }
 
@@ -291,7 +289,7 @@ export class LocalityCollisionSystem {
           testZ <= c.maxZ + padding
         ) {
           // Never crush exterior camera closer than 45% of total orbit distance
-          const minRatio = this.isInsideBuilding || this.isInsideTemple ? 0.35 : 0.48;
+          const minRatio = isInterior ? 0.35 : 0.48;
           return { hit: true, safeDistRatio: Math.max(minRatio, (s - 1) / steps) };
         }
       }

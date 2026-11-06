@@ -11,7 +11,7 @@ import {
 } from "./Characters3D";
 import { createInteractiveStations, Station3DObjects } from "./InteractiveStations3D";
 import { INTERACTIVE_STATIONS } from "./LocalityData";
-import { LocalityCollisionSystem } from "./LocalityCollisionSystem";
+import { LocalityCollisionSystem, BoxCollider } from "./LocalityCollisionSystem";
 import { createSanaHomeInterior, InteriorSceneObjects, SeatAnchor } from "./BuildingInteriors3D";
 import { createShivaTempleSystem, TempleSceneObjects } from "./ShivaTemple3D";
 import { createHanumanTempleSystem, HanumanTempleSceneObjects } from "./HanumanTemple3D";
@@ -69,6 +69,7 @@ export class LocalitySceneEngine {
   public lanternRising = false;
   public waypoint: { x: number; z: number } | null = null;
   private waypointBeaconGroup: THREE.Group | null = null;
+  private vehicleColliders: BoxCollider[] = [];
 
   // Callbacks
   public onProximityChange?: (stationId: string | null) => void;
@@ -129,7 +130,11 @@ export class LocalitySceneEngine {
 
     // 3. Locality Environments & Collision Engine
     this.collisionSystem = new LocalityCollisionSystem();
-    createLocalityRoadNetwork(this.scene);
+    const roadNetwork = createLocalityRoadNetwork(this.scene);
+    this.vehicleColliders = roadNetwork.vehicleColliders || [];
+    if (this.vehicleColliders.length > 0) {
+      this.collisionSystem.exteriorColliders.push(...this.vehicleColliders);
+    }
     createLocalityBuildings(this.scene);
 
     const deco = createDiwaliDecorations(this.scene);
@@ -163,6 +168,7 @@ export class LocalitySceneEngine {
     this.collisionSystem.buildExteriorColliders([
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
+      ...this.vehicleColliders,
     ]);
 
     // 7. Interactive Waypoint 3D Beacon
@@ -426,6 +432,7 @@ export class LocalitySceneEngine {
     this.collisionSystem.buildExteriorColliders([
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
+      ...this.vehicleColliders,
     ]);
 
     // Place character out in the open street in front of Sana Residence
@@ -489,6 +496,7 @@ export class LocalitySceneEngine {
     this.collisionSystem.buildExteriorColliders([
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
+      ...this.vehicleColliders,
     ]);
 
     // Place player in the open temple courtyard plaza (clear from steps and nearby buildings)
@@ -553,6 +561,7 @@ export class LocalitySceneEngine {
     this.collisionSystem.buildExteriorColliders([
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
+      ...this.vehicleColliders,
     ]);
 
     // Place player in the open Hanuman Mandir plaza (free from collisions)
@@ -923,7 +932,7 @@ export class LocalitySceneEngine {
 
       // Dynamic Look-Ahead: slightly offset look target toward movement direction
       const lookAheadX = this.isWalking ? Math.sin(this.charRotation) * 0.8 : 0;
-      const lookAheadZ = this.isWalking ? -Math.cos(this.charRotation) * 0.8 : 0;
+      const lookAheadZ = this.isWalking ? Math.cos(this.charRotation) * 0.8 : 0;
       this.targetLookAt.set(this.charPos.x + lookAheadX, charHeadY, this.charPos.z + lookAheadZ);
     } else if (this.cameraMode === "closeup") {
       const cosPitch = Math.cos(this.orbitPitch);

@@ -59,6 +59,9 @@ export function MinimapUI({
   const playerSvgY = toSvgY(playerPos.z);
   const playerDegrees = (playerHeading * 180) / Math.PI;
 
+  // Circular HUD View Radius (42 SVG units = ~42m radius around player, GTA-style centered tracking)
+  const hudRadius = 42;
+
   const handleMapClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!isExpanded) {
       setIsExpanded(true);
@@ -93,12 +96,12 @@ export function MinimapUI({
           className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-[#08091a]/95 backdrop-blur-md border-2 border-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.35)] overflow-hidden cursor-pointer transition-transform hover:scale-105 active:scale-95"
           title="Live Locality GPS Minimap • Tap to expand"
         >
-          {/* Inner SVG Rendering */}
+          {/* Inner SVG Rendering with Player-Centric ViewBox (Never Drifts Outside) */}
           <svg
-            viewBox="0 0 300 240"
+            viewBox={`${playerSvgX - hudRadius} ${playerSvgY - hudRadius} ${hudRadius * 2} ${hudRadius * 2}`}
             className="w-full h-full"
             style={{
-              transformOrigin: `${playerSvgX}px ${playerSvgY}px`,
+              transformOrigin: "center center",
               transform: mapMode === "rotating" ? `rotate(${-playerDegrees}deg)` : "none",
               transition: "transform 0.08s ease-out",
             }}

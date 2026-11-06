@@ -92,21 +92,10 @@ export function createAalekhCharacter(): CharacterRig {
   customModelGroup.visible = false;
   root.add(customModelGroup);
 
+  // Primary Articulated Rig with Biomechanical Skeletal Kinematics
+  proceduralGroup.visible = true;
+  customModelGroup.visible = false;
   let isCustomModelActive = false;
-
-  // Asynchronously load external 3D boy model if available
-  loadBoyCharacterModel()
-    .then((customModel) => {
-      customModelGroup.add(customModel);
-      customModelGroup.visible = true;
-      proceduralGroup.visible = false;
-      isCustomModelActive = true;
-    })
-    .catch(() => {
-      // Procedural articulated rig remains active
-      proceduralGroup.visible = true;
-      isCustomModelActive = false;
-    });
 
   // -----------------------------------------------------------------------
   // PELVIS / HIPS (Foundation of biomechanical walking)
@@ -643,20 +632,10 @@ export function createShirjanaCharacter(): CharacterRig {
   customModelGroup.visible = false;
   root.add(customModelGroup);
 
+  // Primary Articulated Rig with Biomechanical Skeletal Kinematics & Flared Lehenga
+  proceduralGroup.visible = true;
+  customModelGroup.visible = false;
   let isCustomModelActive = false;
-
-  // Asynchronously load external 3D girl model if available
-  loadGirlCharacterModel()
-    .then((customModel) => {
-      customModelGroup.add(customModel);
-      customModelGroup.visible = true;
-      proceduralGroup.visible = false;
-      isCustomModelActive = true;
-    })
-    .catch(() => {
-      proceduralGroup.visible = true;
-      isCustomModelActive = false;
-    });
 
   // -----------------------------------------------------------------------
   // PELVIS / HIPS & DYNAMIC LEHENGA SKIRT

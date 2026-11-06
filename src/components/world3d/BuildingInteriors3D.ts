@@ -767,6 +767,92 @@ export function createSanaHomeInterior(): InteriorSceneObjects {
   });
 
   // ==========================================
+  // 8B. Grand Floating Marble Staircase & Mezzanine Floor (2-Storey Luxury)
+  // ==========================================
+  const stairWidth = 2.2;
+  const numSteps = 12;
+  const stepRise = 0.19; // 12 * 0.19 = 2.28m rise to mezzanine
+  const stepTread = 0.34;
+  const stairStartX = cx - 0.5;
+  const stairStartZ = bounds.maxZ - 3.2;
+
+  const stepMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2, metalness: 0.05 });
+  const stepLedMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+  const brassRailMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.85, roughness: 0.2 });
+
+  for (let s = 0; s < numSteps; s++) {
+    const stepY = 0.1 + s * stepRise;
+    const stepZ = stairStartZ - s * stepTread;
+
+    // Marble Step Block
+    const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(stairWidth, stepRise, stepTread), stepMat);
+    stepMesh.position.set(stairStartX, stepY, stepZ);
+    stepMesh.receiveShadow = true;
+    stepMesh.castShadow = true;
+    group.add(stepMesh);
+
+    // Warm Underside LED Riser Strip
+    const led = new THREE.Mesh(new THREE.BoxGeometry(stairWidth - 0.2, 0.02, 0.02), stepLedMat);
+    led.position.set(stairStartX, stepY - stepRise / 2 + 0.02, stepZ + stepTread / 2);
+    group.add(led);
+  }
+
+  // Mezzanine Floor Gallery (Overlooking the Grand Living Room)
+  const mezzHeight = numSteps * stepRise + 0.1;
+  const mezzWidth = 7.5;
+  const mezzDepth = 4.8;
+  const mezzCx = stairStartX + 1.2;
+  const mezzCz = stairStartZ - (numSteps * stepTread) - mezzDepth / 2;
+
+  const mezzFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(mezzWidth, 0.22, mezzDepth),
+    floorMat
+  );
+  mezzFloor.position.set(mezzCx, mezzHeight - 0.11, mezzCz);
+  mezzFloor.receiveShadow = true;
+  group.add(mezzFloor);
+
+  // Mezzanine Glass Balustrade & Brass Handrail
+  const mezzRail = new THREE.Mesh(
+    new THREE.BoxGeometry(mezzWidth, 1.05, 0.06),
+    new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 })
+  );
+  mezzRail.position.set(mezzCx, mezzHeight + 0.52, mezzCz + mezzDepth / 2);
+  group.add(mezzRail);
+
+  const brassHandrail = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.035, 0.035, mezzWidth, 12),
+    brassRailMat
+  );
+  brassHandrail.rotation.z = Math.PI / 2;
+  brassHandrail.position.set(mezzCx, mezzHeight + 1.05, mezzCz + mezzDepth / 2);
+  group.add(brassHandrail);
+
+  // Couple Stargazing Bench on Mezzanine Terrace
+  const benchMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.5 });
+  const mezzBench = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.44, 0.8), benchMat);
+  mezzBench.position.set(mezzCx, mezzHeight + 0.22, mezzCz - 1.2);
+  group.add(mezzBench);
+
+  seatAnchors.push({
+    id: "seat-mezzanine-terrace",
+    label: "Mezzanine Stargazing Lounge",
+    position: new THREE.Vector3(mezzCx, 0, mezzCz - 1.2),
+    rotationY: Math.PI, // Facing South overlooking living room
+    sitHeight: mezzHeight + 0.44,
+    cameraOffset: new THREE.Vector3(0, 1.6, 3.6),
+    cameraLookAt: new THREE.Vector3(mezzCx, mezzHeight + 1.0, mezzCz),
+  });
+
+  furnitureColliders.push({
+    id: "furn-mezzanine-rail",
+    minX: mezzCx - mezzWidth / 2,
+    maxX: mezzCx + mezzWidth / 2,
+    minZ: mezzCz + mezzDepth / 2 - 0.2,
+    maxZ: mezzCz + mezzDepth / 2 + 0.2,
+  });
+
+  // ==========================================
   // 9. Ambient & Chandelier Lighting
   // ==========================================
   // Modern Grand Ring Chandelier in Living Room
