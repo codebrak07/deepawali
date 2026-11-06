@@ -175,10 +175,10 @@ export class LocalitySceneEngine {
     this.aalekh.root.position.copy(this.charPos);
     this.scene.add(this.aalekh.root);
 
-    this.shirjana.root.position.set(this.charPos.x + 1.2, 0, this.charPos.z + 0.2);
+    this.shirjana.root.position.set(this.charPos.x + 0.52, 0, this.charPos.z);
     this.scene.add(this.shirjana.root);
 
-    this.bunny.root.position.set(this.charPos.x - 0.9, 0, this.charPos.z + 0.8);
+    this.bunny.root.position.set(this.charPos.x - 0.75, 0, this.charPos.z - 0.6);
     this.scene.add(this.bunny.root);
 
     // 8. Event Listeners
@@ -428,8 +428,8 @@ export class LocalitySceneEngine {
     this.charRotation = 0;
 
     this.aalekh.root.position.set(safePos.x, 0, safePos.z);
-    this.shirjana.root.position.set(safePos.x + 1.2, 0, safePos.z + 0.2);
-    this.bunny.root.position.set(safePos.x - 1.1, 0, safePos.z + 0.5);
+    this.shirjana.root.position.set(safePos.x + 0.52, 0, safePos.z);
+    this.bunny.root.position.set(safePos.x - 0.75, 0, safePos.z - 0.5);
 
     this.orbitYaw = Math.PI; // Camera behind player looking along the street
     this.orbitDistance = 8.5;
@@ -491,8 +491,8 @@ export class LocalitySceneEngine {
     this.charRotation = 0;
 
     this.aalekh.root.position.set(safePos.x, 0, safePos.z);
-    this.shirjana.root.position.set(safePos.x + 1.2, 0, safePos.z + 0.2);
-    this.bunny.root.position.set(safePos.x - 1.2, 0, safePos.z + 0.5);
+    this.shirjana.root.position.set(safePos.x + 0.52, 0, safePos.z);
+    this.bunny.root.position.set(safePos.x - 0.75, 0, safePos.z - 0.5);
 
     this.orbitYaw = Math.PI;
     this.orbitDistance = 8.5;
@@ -555,8 +555,8 @@ export class LocalitySceneEngine {
     this.charRotation = 0;
 
     this.aalekh.root.position.set(safePos.x, 0, safePos.z);
-    this.shirjana.root.position.set(safePos.x + 1.2, 0, safePos.z + 0.2);
-    this.bunny.root.position.set(safePos.x - 1.1, 0, safePos.z + 0.4);
+    this.shirjana.root.position.set(safePos.x + 0.52, 0, safePos.z);
+    this.bunny.root.position.set(safePos.x - 0.75, 0, safePos.z - 0.5);
 
     this.orbitYaw = Math.PI;
     this.orbitDistance = 8.5;
@@ -811,22 +811,27 @@ export class LocalitySceneEngine {
     }
 
     this.aalekh.root.position.set(this.charPos.x, 0, this.charPos.z);
-    this.aalekh.root.rotation.y = this.charRotation;
+    this.aalekh.root.rotation.y = this.charRotation + 0.04; // Gentle affectionate glance towards Sana
     this.aalekh.updateAnimation(this.isWalking, time);
 
-    // Sana follows beside Aalekh harmoniously
-    const sanaTargetX = this.charPos.x + Math.cos(this.charRotation) * 1.15;
-    const sanaTargetZ = this.charPos.z - Math.sin(this.charRotation) * 1.15;
-    this.shirjana.root.position.x += (sanaTargetX - this.shirjana.root.position.x) * 0.16;
-    this.shirjana.root.position.z += (sanaTargetZ - this.shirjana.root.position.z) * 0.16;
-    this.shirjana.root.rotation.y = this.charRotation;
+    // Sana walks Hand-in-Hand beside Aalekh like a sweet lovey-dovey couple
+    // Spaced at 0.52m (their inner hands clasped closely together in sweet harmony)
+    const rightSideX = Math.cos(this.charRotation);
+    const rightSideZ = -Math.sin(this.charRotation);
+    const sanaTargetX = this.charPos.x + rightSideX * 0.52;
+    const sanaTargetZ = this.charPos.z + rightSideZ * 0.52;
+
+    // Fast, responsive lockstep tracking so hands stay clasped without drifting
+    this.shirjana.root.position.x += (sanaTargetX - this.shirjana.root.position.x) * 0.42;
+    this.shirjana.root.position.z += (sanaTargetZ - this.shirjana.root.position.z) * 0.42;
+    this.shirjana.root.rotation.y = this.charRotation - 0.06; // Sana leans/glances affectionately towards Aalekh
     this.shirjana.updateAnimation(this.isWalking, time);
 
-    // Bunny follows Aalekh and Sana joyfully
-    const bunnyTargetX = this.charPos.x - Math.sin(this.charRotation) * 1.25;
-    const bunnyTargetZ = this.charPos.z - Math.cos(this.charRotation) * 1.25;
-    this.bunny.root.position.x += (bunnyTargetX - this.bunny.root.position.x) * 0.18;
-    this.bunny.root.position.z += (bunnyTargetZ - this.bunny.root.position.z) * 0.18;
+    // Bunny hops beside Aalekh and Sana joyfully
+    const bunnyTargetX = this.charPos.x - rightSideX * 0.75 - Math.sin(this.charRotation) * 0.85;
+    const bunnyTargetZ = this.charPos.z - rightSideZ * 0.75 - Math.cos(this.charRotation) * 0.85;
+    this.bunny.root.position.x += (bunnyTargetX - this.bunny.root.position.x) * 0.22;
+    this.bunny.root.position.z += (bunnyTargetZ - this.bunny.root.position.z) * 0.22;
     this.bunny.root.rotation.y = this.charRotation;
     this.bunny.updateAnimation(this.isWalking, time);
   }

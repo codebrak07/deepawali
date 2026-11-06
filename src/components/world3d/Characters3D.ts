@@ -372,12 +372,13 @@ export function createAalekhCharacter(): CharacterRig {
         const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.055;
         const tilt = Math.sin(walkPhase) * 0.035;
         const sway = Math.cos(walkPhase) * 0.025;
+        // Aalekh walks hand-in-hand: gentle lean towards Sana and synchronized stride
         customModelGroup.position.set(0, bounce, 0);
-        customModelGroup.rotation.set(tilt, sway * 0.5, sway);
+        customModelGroup.rotation.set(tilt, -0.05 + sway * 0.3, -0.02);
       } else {
         const breath = Math.sin(time * 2.2) * 0.012;
         customModelGroup.position.set(0, breath, 0);
-        customModelGroup.rotation.set(0, 0, 0);
+        customModelGroup.rotation.set(0, -0.04, -0.015);
       }
       return;
     }
@@ -424,8 +425,9 @@ export function createAalekhCharacter(): CharacterRig {
 
       leftLeg.rotation.x = legSwing;
       rightLeg.rotation.x = -legSwing;
-      leftArm.rotation.x = -armSwing;
-      rightArm.rotation.x = armSwing;
+      leftArm.rotation.x = -armSwing; // Outer arm swings freely
+      // Inner arm holds Sana's hand in sweet synchrony
+      rightArm.rotation.set(0.12 + Math.sin(walkPhase) * 0.14, -0.15, -0.22);
 
       // Natural spine rotation & body bounce
       torso.rotation.y = Math.sin(walkPhase) * 0.08;
@@ -796,12 +798,13 @@ export function createShirjanaCharacter(): CharacterRig {
         const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.048;
         const tilt = Math.sin(walkPhase) * 0.03;
         const sway = Math.cos(walkPhase) * 0.02;
+        // Sana walks hand-in-hand: gentle lean towards Aalekh and synchronized stride
         customModelGroup.position.set(0, bounce, 0);
-        customModelGroup.rotation.set(tilt, sway * 0.5, sway);
+        customModelGroup.rotation.set(tilt, 0.05 - sway * 0.3, 0.02);
       } else {
         const breath = Math.sin(time * 2.4) * 0.012;
         customModelGroup.position.set(0, breath, 0);
-        customModelGroup.rotation.set(0, 0, 0);
+        customModelGroup.rotation.set(0, 0.04, 0.015);
       }
       return;
     }
@@ -839,8 +842,9 @@ export function createShirjanaCharacter(): CharacterRig {
 
       leftLeg.rotation.x = legSwing;
       rightLeg.rotation.x = -legSwing;
-      leftArm.rotation.x = -armSwing;
-      rightArm.rotation.x = armSwing;
+      // Inner arm holds Aalekh's hand in sweet synchrony
+      leftArm.rotation.set(0.12 + Math.sin(walkPhase) * 0.14, 0.15, 0.22);
+      rightArm.rotation.x = armSwing; // Outer arm swings freely
 
       // Graceful lehenga flair sway
       lehengaGroup.rotation.z = lehengaSway;
