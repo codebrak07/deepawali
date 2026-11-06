@@ -1,5 +1,9 @@
 import * as THREE from "three";
-import { loadBoyCharacterModel, loadGirlCharacterModel } from "./CharacterModelLoader";
+import {
+  loadBoyRiggedCharacter,
+  loadGirlRiggedCharacter,
+  RiggedHumanoidCharacter,
+} from "./CharacterModelLoader";
 
 export interface CharacterRig {
   root: THREE.Group;
@@ -96,6 +100,21 @@ export function createAalekhCharacter(): CharacterRig {
   proceduralGroup.visible = true;
   customModelGroup.visible = false;
   let isCustomModelActive = false;
+
+  let boyRig: RiggedHumanoidCharacter | null = null;
+  loadBoyRiggedCharacter()
+    .then((rig) => {
+      boyRig = rig;
+      customModelGroup.add(rig.root);
+      customModelGroup.visible = true;
+      proceduralGroup.visible = false;
+      isCustomModelActive = true;
+    })
+    .catch((err) => {
+      console.warn("Using procedural Aalekh fallback rig:", err);
+      proceduralGroup.visible = true;
+      isCustomModelActive = false;
+    });
 
   // -----------------------------------------------------------------------
   // PELVIS / HIPS (Foundation of biomechanical walking)
@@ -385,27 +404,114 @@ export function createAalekhCharacter(): CharacterRig {
   };
 
   const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
-    // 1. External 3D Model Procedural Animation (if active)
-    if (customModelGroup.visible) {
+    // 1. Skinned Humanoid 3D Character Model Skeletal Animation (if active)
+    if (boyRig && customModelGroup.visible) {
       if (isSitting) {
-        const sitBreath = Math.sin(time * 2.0) * 0.008;
-        customModelGroup.position.set(0, -0.42 + sitBreath, 0.12);
-        customModelGroup.rotation.set(0.12, 0, 0);
+        boyRig.bones.hips.position.set(0, 0.46, 0.12);
+        boyRig.bones.hips.rotation.set(0, 0, 0);
+        boyRig.bones.spine.rotation.set(-0.06, 0, 0);
+        boyRig.bones.head.rotation.set(0.04, isHoldingHands ? -0.08 : 0, 0);
+
+        boyRig.bones.leftThigh.rotation.set(-Math.PI / 2, 0, 0);
+        boyRig.bones.rightThigh.rotation.set(-Math.PI / 2, 0, 0);
+        boyRig.bones.leftKnee.rotation.set(Math.PI / 2, 0, 0);
+        boyRig.bones.rightKnee.rotation.set(Math.PI / 2, 0, 0);
+        boyRig.bones.leftAnkle.rotation.set(0, 0, 0);
+        boyRig.bones.rightAnkle.rotation.set(0, 0, 0);
+
+        boyRig.bones.leftUpperArm.rotation.set(0.35, 0.15, 0.2);
+        boyRig.bones.leftForearm.rotation.set(0.45, 0, 0);
+        if (isHoldingHands) {
+          boyRig.bones.rightUpperArm.rotation.set(0.32, -0.25, -0.28);
+          boyRig.bones.rightForearm.rotation.set(0.42, 0, -0.15);
+        } else {
+          boyRig.bones.rightUpperArm.rotation.set(0.35, -0.15, -0.2);
+          boyRig.bones.rightForearm.rotation.set(0.45, 0, 0);
+        }
       } else if (isPraying) {
         const prayBreath = Math.sin(time * 2.0) * 0.01;
-        customModelGroup.position.set(0, prayBreath, 0);
-        customModelGroup.rotation.set(0.18, 0, 0);
+        boyRig.bones.hips.position.set(0, 0.50 * 1.78 + prayBreath, 0);
+        boyRig.bones.hips.rotation.set(0, 0, 0);
+        boyRig.bones.spine.rotation.set(0.12, 0, 0);
+        boyRig.bones.head.rotation.set(0.15, 0, 0);
+
+        boyRig.bones.leftThigh.rotation.set(0, 0, 0);
+        boyRig.bones.rightThigh.rotation.set(0, 0, 0);
+        boyRig.bones.leftKnee.rotation.set(0, 0, 0);
+        boyRig.bones.rightKnee.rotation.set(0, 0, 0);
+        boyRig.bones.leftAnkle.rotation.set(0, 0, 0);
+        boyRig.bones.rightAnkle.rotation.set(0, 0, 0);
+
+        boyRig.bones.leftUpperArm.rotation.set(0.85, 0.45, 0.35);
+        boyRig.bones.leftForearm.rotation.set(0.85, 0, 0);
+        boyRig.bones.rightUpperArm.rotation.set(0.85, -0.45, -0.35);
+        boyRig.bones.rightForearm.rotation.set(0.85, 0, 0);
       } else if (isWalking) {
-        walkPhase += 0.18;
-        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.055;
-        const tilt = Math.sin(walkPhase) * 0.035;
-        const sway = Math.cos(walkPhase) * 0.025;
-        customModelGroup.position.set(0, bounce, 0);
-        customModelGroup.rotation.set(tilt, isHoldingHands ? -0.05 + sway * 0.3 : sway * 0.5, isHoldingHands ? -0.02 : 0);
+        const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
+        walkPhase += 0.085 * strideSpeed;
+
+        const thighSwing = Math.sin(walkPhase) * 0.48;
+        const leftThighAngle = thighSwing;
+        const rightThighAngle = -thighSwing;
+
+        // Biomechanical Knee Flexion (up to 72 degrees / 1.25 rad)
+        const leftKneeBend = Math.max(0, -Math.sin(walkPhase + 0.35)) * 0.72;
+        const rightKneeBend = Math.max(0, Math.sin(walkPhase + 0.35)) * 0.72;
+
+        boyRig.bones.leftThigh.rotation.x = leftThighAngle;
+        boyRig.bones.rightThigh.rotation.x = rightThighAngle;
+        boyRig.bones.leftKnee.rotation.x = leftKneeBend;
+        boyRig.bones.rightKnee.rotation.x = rightKneeBend;
+
+        // Ankle Counter-Rotation (keeps sole flat on ground)
+        boyRig.bones.leftAnkle.rotation.x = -(leftThighAngle + leftKneeBend) * 0.55;
+        boyRig.bones.rightAnkle.rotation.x = -(rightThighAngle + rightKneeBend) * 0.55;
+
+        // Pelvic Bounce & Hip Roll
+        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.045;
+        boyRig.bones.hips.position.y = 0.50 * 1.78 + bounce;
+        boyRig.bones.hips.rotation.z = Math.sin(walkPhase) * 0.025;
+        boyRig.bones.spine.rotation.y = -Math.cos(walkPhase) * 0.04;
+        boyRig.bones.head.rotation.y = isHoldingHands ? -0.06 + Math.cos(walkPhase) * 0.02 : Math.cos(walkPhase) * 0.02;
+
+        // Outer Left Arm Swings in Opposition to Leg Stride
+        boyRig.bones.leftUpperArm.rotation.x = -leftThighAngle * 0.75;
+        boyRig.bones.leftForearm.rotation.x = 0.25 + Math.max(0, leftThighAngle) * 0.35;
+
+        // Inner Right Arm Holding Hands with Sana (Folded arms uncurled and extended naturally!)
+        if (isHoldingHands) {
+          const handSwing = Math.sin(walkPhase) * 0.12;
+          boyRig.bones.rightUpperArm.rotation.set(0.14 + handSwing, -0.22, -0.32);
+          boyRig.bones.rightForearm.rotation.set(0.24, 0, -0.16);
+        } else {
+          boyRig.bones.rightUpperArm.rotation.x = leftThighAngle * 0.75;
+          boyRig.bones.rightForearm.rotation.x = 0.25 + Math.max(0, -leftThighAngle) * 0.35;
+        }
       } else {
+        // Natural Idle Breathing
         const breath = Math.sin(time * 2.2) * 0.012;
-        customModelGroup.position.set(0, breath, 0);
-        customModelGroup.rotation.set(0, isHoldingHands ? -0.04 : 0, isHoldingHands ? -0.015 : 0);
+        boyRig.bones.hips.position.set(0, 0.50 * 1.78 + breath, 0);
+        boyRig.bones.hips.rotation.set(0, 0, 0);
+        boyRig.bones.spine.rotation.set(0, 0, 0);
+        boyRig.bones.head.rotation.set(0, isHoldingHands ? -0.06 : 0, 0);
+
+        boyRig.bones.leftThigh.rotation.set(0, 0, 0);
+        boyRig.bones.rightThigh.rotation.set(0, 0, 0);
+        boyRig.bones.leftKnee.rotation.set(0, 0, 0);
+        boyRig.bones.rightKnee.rotation.set(0, 0, 0);
+        boyRig.bones.leftAnkle.rotation.set(0, 0, 0);
+        boyRig.bones.rightAnkle.rotation.set(0, 0, 0);
+
+        boyRig.bones.leftUpperArm.rotation.set(0.08, 0, 0.08);
+        boyRig.bones.leftForearm.rotation.set(0.12, 0, 0);
+
+        if (isHoldingHands) {
+          boyRig.bones.rightUpperArm.rotation.set(0.10, -0.20, -0.30);
+          boyRig.bones.rightForearm.rotation.set(0.22, 0, -0.14);
+        } else {
+          boyRig.bones.rightUpperArm.rotation.set(0.08, 0, -0.08);
+          boyRig.bones.rightForearm.rotation.set(0.12, 0, 0);
+        }
       }
       return;
     }
@@ -636,6 +742,21 @@ export function createShirjanaCharacter(): CharacterRig {
   proceduralGroup.visible = true;
   customModelGroup.visible = false;
   let isCustomModelActive = false;
+
+  let girlRig: RiggedHumanoidCharacter | null = null;
+  loadGirlRiggedCharacter()
+    .then((rig) => {
+      girlRig = rig;
+      customModelGroup.add(rig.root);
+      customModelGroup.visible = true;
+      proceduralGroup.visible = false;
+      isCustomModelActive = true;
+    })
+    .catch((err) => {
+      console.warn("Using procedural Sana fallback rig:", err);
+      proceduralGroup.visible = true;
+      isCustomModelActive = false;
+    });
 
   // -----------------------------------------------------------------------
   // PELVIS / HIPS & DYNAMIC LEHENGA SKIRT
@@ -941,27 +1062,112 @@ export function createShirjanaCharacter(): CharacterRig {
   };
 
   const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
-    // 1. External 3D Model Procedural Animation (if active)
-    if (customModelGroup.visible) {
+    // 1. Skinned Humanoid 3D Girl Model Skeletal Animation (if active)
+    if (girlRig && customModelGroup.visible) {
       if (isSitting) {
-        const sitBreath = Math.sin(time * 2.0) * 0.008;
-        customModelGroup.position.set(0, -0.40 + sitBreath, 0.1);
-        customModelGroup.rotation.set(0.12, 0, 0);
+        girlRig.bones.hips.position.set(0, 0.46, 0.12);
+        girlRig.bones.hips.rotation.set(0, 0, 0);
+        girlRig.bones.spine.rotation.set(-0.06, 0, 0);
+        girlRig.bones.head.rotation.set(0.04, isHoldingHands ? 0.08 : 0, 0);
+
+        girlRig.bones.leftThigh.rotation.set(-Math.PI / 2, 0, 0);
+        girlRig.bones.rightThigh.rotation.set(-Math.PI / 2, 0, 0);
+        girlRig.bones.leftKnee.rotation.set(Math.PI / 2, 0, 0);
+        girlRig.bones.rightKnee.rotation.set(Math.PI / 2, 0, 0);
+        girlRig.bones.leftAnkle.rotation.set(0, 0, 0);
+        girlRig.bones.rightAnkle.rotation.set(0, 0, 0);
+
+        if (isHoldingHands) {
+          girlRig.bones.leftUpperArm.rotation.set(0.32, 0.25, 0.28);
+          girlRig.bones.leftForearm.rotation.set(0.42, 0, 0.15);
+        } else {
+          girlRig.bones.leftUpperArm.rotation.set(0.35, 0.15, 0.2);
+          girlRig.bones.leftForearm.rotation.set(0.45, 0, 0);
+        }
+        girlRig.bones.rightUpperArm.rotation.set(0.35, -0.15, -0.2);
+        girlRig.bones.rightForearm.rotation.set(0.45, 0, 0);
       } else if (isPraying) {
         const prayBreath = Math.sin(time * 2.0) * 0.01;
-        customModelGroup.position.set(0, prayBreath, 0);
-        customModelGroup.rotation.set(0.18, 0, 0);
+        girlRig.bones.hips.position.set(0, 0.50 * 1.65 + prayBreath, 0);
+        girlRig.bones.hips.rotation.set(0, 0, 0);
+        girlRig.bones.spine.rotation.set(0.12, 0, 0);
+        girlRig.bones.head.rotation.set(0.15, 0, 0);
+
+        girlRig.bones.leftThigh.rotation.set(0, 0, 0);
+        girlRig.bones.rightThigh.rotation.set(0, 0, 0);
+        girlRig.bones.leftKnee.rotation.set(0, 0, 0);
+        girlRig.bones.rightKnee.rotation.set(0, 0, 0);
+        girlRig.bones.leftAnkle.rotation.set(0, 0, 0);
+        girlRig.bones.rightAnkle.rotation.set(0, 0, 0);
+
+        girlRig.bones.leftUpperArm.rotation.set(0.85, 0.45, 0.35);
+        girlRig.bones.leftForearm.rotation.set(0.85, 0, 0);
+        girlRig.bones.rightUpperArm.rotation.set(0.85, -0.45, -0.35);
+        girlRig.bones.rightForearm.rotation.set(0.85, 0, 0);
       } else if (isWalking) {
-        walkPhase += 0.18;
-        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.048;
-        const tilt = Math.sin(walkPhase) * 0.03;
-        const sway = Math.cos(walkPhase) * 0.02;
-        customModelGroup.position.set(0, bounce, 0);
-        customModelGroup.rotation.set(tilt, isHoldingHands ? 0.05 - sway * 0.3 : -sway * 0.5, isHoldingHands ? 0.02 : 0);
+        const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
+        walkPhase += 0.085 * strideSpeed;
+
+        const thighSwing = Math.sin(walkPhase) * 0.45;
+        const leftThighAngle = thighSwing;
+        const rightThighAngle = -thighSwing;
+
+        // Biomechanical Knee Flexion (Knees bend backwards dynamically!)
+        const leftKneeBend = Math.max(0, -Math.sin(walkPhase + 0.35)) * 0.68;
+        const rightKneeBend = Math.max(0, Math.sin(walkPhase + 0.35)) * 0.68;
+
+        girlRig.bones.leftThigh.rotation.x = leftThighAngle;
+        girlRig.bones.rightThigh.rotation.x = rightThighAngle;
+        girlRig.bones.leftKnee.rotation.x = leftKneeBend;
+        girlRig.bones.rightKnee.rotation.x = rightKneeBend;
+
+        girlRig.bones.leftAnkle.rotation.x = -(leftThighAngle + leftKneeBend) * 0.55;
+        girlRig.bones.rightAnkle.rotation.x = -(rightThighAngle + rightKneeBend) * 0.55;
+
+        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.040;
+        girlRig.bones.hips.position.y = 0.50 * 1.65 + bounce;
+        girlRig.bones.hips.rotation.z = Math.sin(walkPhase) * 0.022;
+        girlRig.bones.spine.rotation.y = -Math.cos(walkPhase) * 0.035;
+        girlRig.bones.head.rotation.y = isHoldingHands ? 0.06 - Math.cos(walkPhase) * 0.02 : -Math.cos(walkPhase) * 0.02;
+
+        // Inner Left Arm Holding Hands with Aalekh!
+        if (isHoldingHands) {
+          const handSwing = Math.sin(walkPhase) * 0.12;
+          girlRig.bones.leftUpperArm.rotation.set(0.14 + handSwing, 0.22, 0.32);
+          girlRig.bones.leftForearm.rotation.set(0.24, 0, 0.16);
+        } else {
+          girlRig.bones.leftUpperArm.rotation.x = -leftThighAngle * 0.70;
+          girlRig.bones.leftForearm.rotation.x = 0.22 + Math.max(0, leftThighAngle) * 0.35;
+        }
+
+        // Outer Right Arm Swings with Graceful Momentum
+        girlRig.bones.rightUpperArm.rotation.x = leftThighAngle * 0.70;
+        girlRig.bones.rightForearm.rotation.x = 0.22 + Math.max(0, -leftThighAngle) * 0.35;
       } else {
+        // Natural Idle
         const breath = Math.sin(time * 2.4) * 0.012;
-        customModelGroup.position.set(0, breath, 0);
-        customModelGroup.rotation.set(0, isHoldingHands ? 0.04 : 0, isHoldingHands ? 0.015 : 0);
+        girlRig.bones.hips.position.set(0, 0.50 * 1.65 + breath, 0);
+        girlRig.bones.hips.rotation.set(0, 0, 0);
+        girlRig.bones.spine.rotation.set(0, 0, 0);
+        girlRig.bones.head.rotation.set(0, isHoldingHands ? 0.06 : 0, 0);
+
+        girlRig.bones.leftThigh.rotation.set(0, 0, 0);
+        girlRig.bones.rightThigh.rotation.set(0, 0, 0);
+        girlRig.bones.leftKnee.rotation.set(0, 0, 0);
+        girlRig.bones.rightKnee.rotation.set(0, 0, 0);
+        girlRig.bones.leftAnkle.rotation.set(0, 0, 0);
+        girlRig.bones.rightAnkle.rotation.set(0, 0, 0);
+
+        if (isHoldingHands) {
+          girlRig.bones.leftUpperArm.rotation.set(0.10, 0.20, 0.30);
+          girlRig.bones.leftForearm.rotation.set(0.22, 0, 0.14);
+        } else {
+          girlRig.bones.leftUpperArm.rotation.set(0.08, 0, 0.08);
+          girlRig.bones.leftForearm.rotation.set(0.12, 0, 0);
+        }
+
+        girlRig.bones.rightUpperArm.rotation.set(0.08, 0, -0.08);
+        girlRig.bones.rightForearm.rotation.set(0.12, 0, 0);
       }
       return;
     }
