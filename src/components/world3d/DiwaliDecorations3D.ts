@@ -277,12 +277,35 @@ export function createDiwaliDecorations(scene: THREE.Scene): {
   }
   particleGeo.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
 
+  // Create circular soft glowing particle texture (eliminates raw square WebGL point artifacts)
+  const createFireflyTexture = (): THREE.CanvasTexture => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 30);
+      grad.addColorStop(0, "rgba(255, 240, 160, 1.0)");
+      grad.addColorStop(0.35, "rgba(245, 158, 11, 0.7)");
+      grad.addColorStop(0.75, "rgba(234, 88, 12, 0.2)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  };
+
+  const fireflyTexture = createFireflyTexture();
+
   const particleMat = new THREE.PointsMaterial({
+    map: fireflyTexture,
     color: 0xfde047,
-    size: 0.35,
+    size: 0.08,
     transparent: true,
     opacity: 0.85,
     blending: THREE.AdditiveBlending,
+    depthWrite: false,
   });
   const floatingParticles = new THREE.Points(particleGeo, particleMat);
   decorationsGroup.add(floatingParticles);

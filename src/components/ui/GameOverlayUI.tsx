@@ -65,6 +65,8 @@ interface GameOverlayUIProps {
   onStopWatchingTV?: () => void;
   onNextTVChannel?: () => void;
   onToggleLamps?: () => void;
+  isHoldingHands?: boolean;
+  onToggleHoldingHands?: () => void;
 }
 
 export function GameOverlayUI({
@@ -99,6 +101,8 @@ export function GameOverlayUI({
   onStopWatchingTV,
   onNextTVChannel,
   onToggleLamps,
+  isHoldingHands = true,
+  onToggleHoldingHands,
 }: GameOverlayUIProps) {
   const cameraPresets = [
     { id: "exploration", label: "Third Person", icon: Eye, tip: "Free Orbit Follow" },
@@ -631,10 +635,27 @@ export function GameOverlayUI({
 
             {/* CENTER: DESKTOP HINT & FAST TRAVEL BUTTONS */}
             <div className="flex flex-col items-center gap-1.5 pb-1 max-w-[260px] sm:max-w-none">
-              {/* Desktop hint */}
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#150a24]/85 border border-slate-800 text-slate-300 text-xs">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <span>WASD: Move • Mouse Drag: Orbit • Tap Minimap: GPS Waypoint</span>
+              {/* Desktop hint & Couple Status */}
+              <div className="flex items-center gap-2">
+                <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#150a24]/85 border border-slate-800 text-slate-300 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span>WASD: Move • Mouse Drag: Orbit • Tap Minimap: GPS Waypoint</span>
+                </div>
+
+                {onToggleHoldingHands && (
+                  <button
+                    onClick={onToggleHoldingHands}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold backdrop-blur-md shadow-lg transition-all cursor-pointer ${
+                      isHoldingHands
+                        ? "bg-gradient-to-r from-rose-600/90 to-pink-600/90 border border-pink-400 text-white shadow-rose-950/50 hover:scale-105 active:scale-95"
+                        : "bg-slate-900/90 border border-slate-700 text-slate-300 hover:border-pink-400 hover:scale-105 active:scale-95"
+                    }`}
+                    title="Toggle Couple Hand-in-Hand Walking"
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${isHoldingHands ? "text-pink-200 fill-pink-300 animate-pulse" : "text-slate-400"}`} />
+                    <span>{isHoldingHands ? "Holding Hands 💖" : "Walk Apart"}</span>
+                  </button>
+                )}
               </div>
 
               {/* Fast Travel Shortcuts */}

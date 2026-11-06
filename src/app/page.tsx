@@ -33,6 +33,7 @@ export default function Page() {
   const [isSitting, setIsSitting] = useState<boolean>(false);
   const [isWatchingTV, setIsWatchingTV] = useState<boolean>(false);
   const [tvChannelName, setTvChannelName] = useState<string>("Diwali Live");
+  const [isHoldingHands, setIsHoldingHands] = useState<boolean>(true);
 
   // Initialize 3D Engine on mount
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function Page() {
       setIsInsideHanuman(engine.isInsideHanuman);
       setIsSitting(engine.isSitting);
       setIsWatchingTV(engine.isWatchingTV);
+      setIsHoldingHands(engine.isHoldingHands);
       setTvChannelName(engine.interiorSuite.getTVChannelName());
     };
 
@@ -419,6 +421,13 @@ export default function Page() {
           onStopWatchingTV={() => engineRef.current?.stopWatchingTV()}
           onNextTVChannel={() => engineRef.current?.nextTVChannel()}
           onToggleLamps={() => engineRef.current?.toggleHomeLamps()}
+          isHoldingHands={isHoldingHands}
+          onToggleHoldingHands={() => {
+            if (engineRef.current) {
+              const val = engineRef.current.toggleHoldingHands();
+              setIsHoldingHands(val);
+            }
+          }}
         />
       )}
 

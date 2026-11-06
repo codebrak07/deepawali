@@ -134,33 +134,54 @@ export function createInteractiveStations(scene: THREE.Scene): Station3DObjects 
 
   // ==========================================
   // STATION C: Akash Kandil Launch Pad (30, 0)
+  // Traditional Indian Diwali Star Lantern on Ornate Festive Post
   // ==========================================
   const stationC_LanternMesh = new THREE.Group();
-  stationC_LanternMesh.position.set(30, 1.2, 0);
+  stationC_LanternMesh.position.set(30, 0, 0);
 
-  // Star Akash Kandil Mesh
-  const starGeo = new THREE.OctahedronGeometry(1.0, 0);
+  // Ornate Wooden Pole
+  const poleGeo = new THREE.CylinderGeometry(0.08, 0.1, 4.2, 10);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.7 });
+  const pole = new THREE.Mesh(poleGeo, poleMat);
+  pole.position.y = 2.1;
+  stationC_LanternMesh.add(pole);
+
+  // Curved Brass Arm
+  const armGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8);
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.2 });
+  const arm = new THREE.Mesh(armGeo, brassMat);
+  arm.rotation.z = Math.PI / 2.5;
+  arm.position.set(0.35, 4.1, 0);
+  stationC_LanternMesh.add(arm);
+
+  // Delicate Handcrafted Star Akash Kandil (Hanging at y = 3.6m)
+  const lanternBodyGroup = new THREE.Group();
+  lanternBodyGroup.position.set(0.65, 3.6, 0);
+
+  const starGeo = new THREE.OctahedronGeometry(0.38, 0);
   const starMat = new THREE.MeshStandardMaterial({
     color: 0xf59e0b,
     emissive: 0xf97316,
-    emissiveIntensity: 0.95,
+    emissiveIntensity: 1.2,
+    roughness: 0.3,
   });
   const starBody = new THREE.Mesh(starGeo, starMat);
-  stationC_LanternMesh.add(starBody);
+  lanternBodyGroup.add(starBody);
 
-  // Hanging Streamers
-  const streamerGeo = new THREE.ConeGeometry(0.18, 1.2, 4);
+  // Flowing Pink & Gold Silk Streamers
+  const streamerGeo = new THREE.ConeGeometry(0.06, 0.65, 4);
   const streamerMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
-  [-0.35, 0, 0.35].forEach((sx) => {
+  [-0.12, 0, 0.12].forEach((sx) => {
     const s = new THREE.Mesh(streamerGeo, streamerMat);
-    s.position.set(sx, -1.1, 0);
-    stationC_LanternMesh.add(s);
+    s.position.set(sx, -0.42, 0);
+    lanternBodyGroup.add(s);
   });
 
-  const stationC_LanternLight = new THREE.PointLight(0xf59e0b, 2.5, 12);
+  const stationC_LanternLight = new THREE.PointLight(0xf59e0b, 2.0, 10);
   stationC_LanternLight.position.set(0, 0, 0);
-  stationC_LanternMesh.add(stationC_LanternLight);
+  lanternBodyGroup.add(stationC_LanternLight);
 
+  stationC_LanternMesh.add(lanternBodyGroup);
   group.add(stationC_LanternMesh);
 
   // ==========================================
@@ -171,23 +192,23 @@ export function createInteractiveStations(scene: THREE.Scene): Station3DObjects 
     marker.position.set(st.x, 0, st.z);
 
     // Glowing Ring on Ground
-    const ringGeo = new THREE.RingGeometry(2.0, 2.3, 32);
+    const ringGeo = new THREE.RingGeometry(1.6, 1.85, 32);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xfde047,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.75,
     });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.04;
     marker.add(ring);
 
-    // Floating Golden Diamond / Marker Beacon
-    const beaconGeo = new THREE.OctahedronGeometry(0.35, 0);
+    // Elegant Floating Golden Diya Beacon (delicate proportion, not oversized blocks)
+    const beaconGeo = new THREE.ConeGeometry(0.12, 0.28, 8);
     const beaconMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
     const beacon = new THREE.Mesh(beaconGeo, beaconMat);
-    beacon.position.y = 2.4;
+    beacon.position.y = 1.6;
     marker.add(beacon);
 
     group.add(marker);

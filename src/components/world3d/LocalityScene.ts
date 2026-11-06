@@ -47,6 +47,7 @@ export class LocalitySceneEngine {
   public isSitting = false;
   public activeSeatAnchor: SeatAnchor | null = null;
   public isWatchingTV = false;
+  public isHoldingHands = true;
 
   // Camera Orbit Rig & State (GTA-Style calibrated defaults)
   public cameraMode: CameraViewMode = "story";
@@ -181,6 +182,10 @@ export class LocalitySceneEngine {
     this.bunny.root.position.set(this.charPos.x - 0.75, 0, this.charPos.z - 0.6);
     this.scene.add(this.bunny.root);
 
+    // Initial lovey-dovey hand holding setup
+    this.aalekh.setHoldingHands(true);
+    this.shirjana.setHoldingHands(true);
+
     // 8. Event Listeners
     window.addEventListener("resize", this.handleResize);
     this.setupInputListeners();
@@ -202,12 +207,13 @@ export class LocalitySceneEngine {
     shaft.position.y = 9;
     this.waypointBeaconGroup.add(shaft);
 
-    // Hovering Diamond Indicator
-    const diamondGeo = new THREE.OctahedronGeometry(0.65, 0);
-    const diamondMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
-    const diamond = new THREE.Mesh(diamondGeo, diamondMat);
-    diamond.position.y = 3.5;
-    this.waypointBeaconGroup.add(diamond);
+    // Hovering Waypoint Pin Indicator (pointing down towards target)
+    const pinGeo = new THREE.ConeGeometry(0.2, 0.5, 16);
+    const pinMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+    const pin = new THREE.Mesh(pinGeo, pinMat);
+    pin.rotation.x = Math.PI; // point down towards ground
+    pin.position.y = 2.8;
+    this.waypointBeaconGroup.add(pin);
 
     // Ground Pulsing Ring
     const ringGeo = new THREE.RingGeometry(1.2, 1.5, 24);
@@ -637,6 +643,13 @@ export class LocalitySceneEngine {
     return this.interiorSuite.toggleLamps();
   }
 
+  public toggleHoldingHands(): boolean {
+    this.isHoldingHands = !this.isHoldingHands;
+    this.aalekh.setHoldingHands(this.isHoldingHands);
+    this.shirjana.setHoldingHands(this.isHoldingHands);
+    return this.isHoldingHands;
+  }
+
   // Sacred Temple Actions
   public performAbhishek() {
     this.templeSuite.performAbhishek();
@@ -811,20 +824,21 @@ export class LocalitySceneEngine {
     }
 
     this.aalekh.root.position.set(this.charPos.x, 0, this.charPos.z);
-    this.aalekh.root.rotation.y = this.charRotation + 0.04; // Gentle affectionate glance towards Sana
+    this.aalekh.root.rotation.y = this.charRotation + (this.isHoldingHands ? 0.04 : 0); // Gentle affectionate glance towards Sana
     this.aalekh.updateAnimation(this.isWalking, time);
 
     // Sana walks Hand-in-Hand beside Aalekh like a sweet lovey-dovey couple
     // Spaced at 0.52m (their inner hands clasped closely together in sweet harmony)
+    const spacing = this.isHoldingHands ? 0.52 : 0.85;
     const rightSideX = Math.cos(this.charRotation);
     const rightSideZ = -Math.sin(this.charRotation);
-    const sanaTargetX = this.charPos.x + rightSideX * 0.52;
-    const sanaTargetZ = this.charPos.z + rightSideZ * 0.52;
+    const sanaTargetX = this.charPos.x + rightSideX * spacing;
+    const sanaTargetZ = this.charPos.z + rightSideZ * spacing;
 
     // Fast, responsive lockstep tracking so hands stay clasped without drifting
     this.shirjana.root.position.x += (sanaTargetX - this.shirjana.root.position.x) * 0.42;
     this.shirjana.root.position.z += (sanaTargetZ - this.shirjana.root.position.z) * 0.42;
-    this.shirjana.root.rotation.y = this.charRotation - 0.06; // Sana leans/glances affectionately towards Aalekh
+    this.shirjana.root.rotation.y = this.charRotation - (this.isHoldingHands ? 0.06 : 0.01); // Sana leans/glances affectionately towards Aalekh
     this.shirjana.updateAnimation(this.isWalking, time);
 
     // Bunny hops beside Aalekh and Sana joyfully

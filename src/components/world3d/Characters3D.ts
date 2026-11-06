@@ -3,15 +3,24 @@ import { loadBoyCharacterModel, loadGirlCharacterModel } from "./CharacterModelL
 
 export interface CharacterRig {
   root: THREE.Group;
+  pelvis: THREE.Group;
   leftLeg: THREE.Group;
+  leftKnee: THREE.Group;
+  leftAnkle: THREE.Group;
   rightLeg: THREE.Group;
+  rightKnee: THREE.Group;
+  rightAnkle: THREE.Group;
   leftArm: THREE.Group;
+  leftElbow: THREE.Group;
   rightArm: THREE.Group;
+  rightElbow: THREE.Group;
   head: THREE.Group;
   torso: THREE.Group;
+  isCustomModelActive: boolean;
   setPraying: (praying: boolean) => void;
   setSitting: (sitting: boolean) => void;
-  updateAnimation: (isWalking: boolean, time: number) => void;
+  setHoldingHands: (holding: boolean) => void;
+  updateAnimation: (isWalking: boolean, time: number, moveSpeed?: number) => void;
 }
 
 export interface BunnyRig {
@@ -22,61 +31,58 @@ export interface BunnyRig {
 }
 
 // =========================================================================
-// 1. AALEKH CHARACTER: Detailed stylized 3D model with festive Kurta-Sherwani
+// 1. AALEKH (BOY) CHARACTER: Articulated Rig with Biomechanical Walking Kinematics
 // =========================================================================
 export function createAalekhCharacter(): CharacterRig {
   const root = new THREE.Group();
-  root.name = "aalekhCharacter";
+  root.name = "aalekhCharacterRoot";
 
-  // Scale calibration: 1.75m realistic stylized proportion
-  const scale = 1.0;
+  const scale = 1.0; // 1.78m tall confident modern Indian male proportion
 
-  // Materials
+  // High-End Materials
   const kurtaMat = new THREE.MeshStandardMaterial({
-    color: 0x991b1b, // Royal Crimson Sherwani
-    roughness: 0.45,
-    metalness: 0.1,
+    color: 0x881337, // Royal Velvet Crimson
+    roughness: 0.5,
+    metalness: 0.15,
   });
 
   const goldZariMat = new THREE.MeshStandardMaterial({
-    color: 0xf59e0b, // Radiant Gold Embroidery
-    roughness: 0.3,
-    metalness: 0.65,
-  });
-
-  const stoleMat = new THREE.MeshStandardMaterial({
-    color: 0xfbbf24, // Saffron Silk Stole
-    roughness: 0.4,
-    metalness: 0.2,
+    color: 0xf59e0b, // Radiant Gold Zari Border
+    roughness: 0.28,
+    metalness: 0.75,
   });
 
   const pajamaMat = new THREE.MeshStandardMaterial({
-    color: 0xfdf8f0, // Cream Silk Churidar
-    roughness: 0.6,
-  });
-
-  const skinMat = new THREE.MeshStandardMaterial({
-    color: 0xfbbf94, // Warm glowing skin tone
+    color: 0xf8fafc, // Pure Silk Cream Churidar
     roughness: 0.55,
   });
 
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: 0xfbcfe8, // Warm healthy Indian skin tone
+    roughness: 0.52,
+    metalness: 0.05,
+  });
+  skinMat.color.setHex(0xe2a278); // Warm sun-kissed Indian complexion
+
   const hairMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b, // Deep espresso/black stylish styled hair
-    roughness: 0.85,
+    color: 0x18181b, // Deep espresso / jet black
+    roughness: 0.65,
+    metalness: 0.2,
   });
 
   const juttiMat = new THREE.MeshStandardMaterial({
-    color: 0x78350f, // Tan leather festive mojaris with gold toe
+    color: 0x78350f, // Tan leather festive mojaris
     roughness: 0.4,
-    metalness: 0.3,
+    metalness: 0.35,
   });
 
   const goldAccentMat = new THREE.MeshStandardMaterial({
     color: 0xfbbf24,
-    metalness: 0.8,
-    roughness: 0.2,
+    metalness: 0.85,
+    roughness: 0.18,
   });
 
+  // Groups
   const proceduralGroup = new THREE.Group();
   proceduralGroup.name = "proceduralAalekhRig";
   root.add(proceduralGroup);
@@ -86,284 +92,317 @@ export function createAalekhCharacter(): CharacterRig {
   customModelGroup.visible = false;
   root.add(customModelGroup);
 
-  // Asynchronously load realistic 3D boy model from public/streetwear_86_full_body.glb
+  let isCustomModelActive = false;
+
+  // Asynchronously load external 3D boy model if available
   loadBoyCharacterModel()
     .then((customModel) => {
       customModelGroup.add(customModel);
       customModelGroup.visible = true;
       proceduralGroup.visible = false;
+      isCustomModelActive = true;
     })
-    .catch((err) => {
-      console.warn("Using procedural Aalekh fallback rig:", err);
+    .catch(() => {
+      // Procedural articulated rig remains active
+      proceduralGroup.visible = true;
+      isCustomModelActive = false;
     });
 
   // -----------------------------------------------------------------------
-  // TORSO & UPPER BODY (Curved, tailored sherwani)
+  // PELVIS / HIPS (Foundation of biomechanical walking)
+  // -----------------------------------------------------------------------
+  const pelvis = new THREE.Group();
+  pelvis.position.y = 0.90 * scale;
+  proceduralGroup.add(pelvis);
+
+  // Hip belt / lower sherwani waist
+  const hipMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.18, 16), kurtaMat);
+  hipMesh.castShadow = true;
+  pelvis.add(hipMesh);
+
+  // Gold Zari Waistband Kamarbandh
+  const waistBand = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.02, 8, 20), goldZariMat);
+  waistBand.rotation.x = Math.PI / 2;
+  pelvis.add(waistBand);
+
+  // Lower Sherwani Flares (Split front/back for unhindered leg movement)
+  const flapGeo = new THREE.ConeGeometry(0.32, 0.42, 16, 1, true);
+  const flap = new THREE.Mesh(flapGeo, kurtaMat);
+  flap.rotation.x = Math.PI;
+  flap.position.y = -0.22;
+  pelvis.add(flap);
+
+  // -----------------------------------------------------------------------
+  // SPINE & CHEST (Torso with tailored Bandhgala)
   // -----------------------------------------------------------------------
   const torso = new THREE.Group();
-  torso.position.y = 1.05 * scale;
-  proceduralGroup.add(torso);
+  torso.position.y = 0.15;
+  pelvis.add(torso);
 
-  // Chest & Midsection (tapered capsule/cylinder)
-  const chestGeo = new THREE.CylinderGeometry(0.32, 0.28, 0.65, 16);
+  // Chest / upper body
+  const chestGeo = new THREE.CylinderGeometry(0.28, 0.24, 0.48, 16);
   const chest = new THREE.Mesh(chestGeo, kurtaMat);
+  chest.position.y = 0.24;
   chest.castShadow = true;
-  chest.receiveShadow = true;
   torso.add(chest);
 
-  // Lower Kurta Flap (A-line flare down to knees)
-  const kurtaFlapGeo = new THREE.ConeGeometry(0.38, 0.45, 16, 1, true);
-  const kurtaFlap = new THREE.Mesh(kurtaFlapGeo, kurtaMat);
-  kurtaFlap.rotation.x = Math.PI;
-  kurtaFlap.position.y = -0.42;
-  kurtaFlap.castShadow = true;
-  torso.add(kurtaFlap);
-
   // Mandarin Bandhgala Collar
-  const collarGeo = new THREE.CylinderGeometry(0.18, 0.19, 0.12, 16);
-  const collar = new THREE.Mesh(collarGeo, goldZariMat);
-  collar.position.y = 0.36;
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.08, 16), goldZariMat);
+  collar.position.y = 0.50;
   torso.add(collar);
 
-  // Central Gold Zari Button Placket with buttons
-  const placketGeo = new THREE.BoxGeometry(0.06, 0.62, 0.04);
-  const placket = new THREE.Mesh(placketGeo, goldZariMat);
-  placket.position.set(0, 0.02, 0.31);
+  // Gold Button Placket
+  const placket = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.44, 0.03), goldZariMat);
+  placket.position.set(0, 0.24, 0.27);
   torso.add(placket);
 
-  for (let i = 0; i < 5; i++) {
-    const btnGeo = new THREE.SphereGeometry(0.02, 8, 8);
-    const btn = new THREE.Mesh(btnGeo, goldAccentMat);
-    btn.position.set(0, 0.22 - i * 0.1, 0.33);
+  for (let b = 0; b < 5; b++) {
+    const btn = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), goldAccentMat);
+    btn.position.set(0, 0.38 - b * 0.07, 0.29);
     torso.add(btn);
   }
 
-  // Silk Stole / Dupatta draped over left shoulder
-  const stoleGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.85, 8);
-  const stole = new THREE.Mesh(stoleGeo, stoleMat);
-  stole.position.set(-0.28, -0.05, 0.08);
-  stole.rotation.z = 0.12;
-  torso.add(stole);
-
   // -----------------------------------------------------------------------
-  // HEAD & FACIAL FEATURES (Detailed sculpted stylized head)
+  // HEAD & EXPRESSIVE FACE
   // -----------------------------------------------------------------------
   const head = new THREE.Group();
-  head.position.set(0, 1.62 * scale, 0);
-  proceduralGroup.add(head);
+  head.position.set(0, 0.62 * scale, 0);
+  torso.add(head);
 
   // Neck
-  const neckGeo = new THREE.CylinderGeometry(0.12, 0.13, 0.18, 12);
-  const neck = new THREE.Mesh(neckGeo, skinMat);
-  neck.position.y = -0.15;
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 0.12, 12), skinMat);
+  neck.position.y = -0.06;
   head.add(neck);
 
-  // Cranium / Face
-  const craniumGeo = new THREE.SphereGeometry(0.24, 20, 20);
-  craniumGeo.scale(1.0, 1.15, 1.05);
+  // Sculpted Cranium & Jawline
+  const craniumGeo = new THREE.SphereGeometry(0.18, 20, 20);
+  craniumGeo.scale(0.95, 1.15, 1.05);
   const cranium = new THREE.Mesh(craniumGeo, skinMat);
   cranium.castShadow = true;
   head.add(cranium);
 
-  // Stylized Hair (Volumetric, swept to side)
+  // Sculpted Modern Layered Quiff Hair
   const hairGroup = new THREE.Group();
-  const hairBaseGeo = new THREE.SphereGeometry(0.26, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.7);
-  hairBaseGeo.scale(1.02, 1.1, 1.08);
-  const hairBase = new THREE.Mesh(hairBaseGeo, hairMat);
-  hairBase.position.set(0, 0.04, -0.02);
-  hairGroup.add(hairBase);
+  const hairCrown = new THREE.Mesh(
+    new THREE.SphereGeometry(0.19, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.7),
+    hairMat
+  );
+  hairCrown.scale.set(0.98, 1.1, 1.05);
+  hairCrown.position.set(0, 0.04, -0.01);
+  hairGroup.add(hairCrown);
 
-  // Side hair sweep tufts
-  const tuftGeo = new THREE.ConeGeometry(0.12, 0.28, 8);
-  const tuft1 = new THREE.Mesh(tuftGeo, hairMat);
-  tuft1.rotation.set(-0.5, 0.2, -0.8);
-  tuft1.position.set(-0.15, 0.22, 0.1);
-  hairGroup.add(tuft1);
+  // Stylized textured hair tufts
+  const tuftGeo = new THREE.ConeGeometry(0.08, 0.22, 6);
+  const tuftL = new THREE.Mesh(tuftGeo, hairMat);
+  tuftL.rotation.set(-0.4, 0.2, -0.7);
+  tuftL.position.set(-0.08, 0.16, 0.09);
+  hairGroup.add(tuftL);
 
-  const tuft2 = new THREE.Mesh(tuftGeo, hairMat);
-  tuft2.rotation.set(-0.4, -0.2, 0.7);
-  tuft2.position.set(0.12, 0.23, 0.08);
-  hairGroup.add(tuft2);
+  const tuftR = new THREE.Mesh(tuftGeo, hairMat);
+  tuftR.rotation.set(-0.35, -0.2, 0.6);
+  tuftR.position.set(0.06, 0.18, 0.08);
+  hairGroup.add(tuftR);
   head.add(hairGroup);
 
-  // Eyes (Almond shaped stylized eyes with dark pupil & white highlight)
+  // Almond-Shaped Expressive Eyes
   const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const irisMat = new THREE.MeshBasicMaterial({ color: 0x271810 });
-  const pupilGleamMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const irisMat = new THREE.MeshBasicMaterial({ color: 0x3d2314 });
+  const gleamMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-  [-0.08, 0.08].forEach((xPos) => {
-    // Eye white
-    const eyeWhiteGeo = new THREE.SphereGeometry(0.04, 10, 10);
-    eyeWhiteGeo.scale(1.2, 0.8, 0.4);
-    const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-    eyeWhite.position.set(xPos, 0.02, 0.23);
+  [-0.055, 0.055].forEach((xEye) => {
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), eyeWhiteMat);
+    eyeWhite.scale.set(1.1, 0.75, 0.35);
+    eyeWhite.position.set(xEye, 0.02, 0.165);
     head.add(eyeWhite);
 
-    // Iris
-    const irisGeo = new THREE.CircleGeometry(0.025, 10);
-    const iris = new THREE.Mesh(irisGeo, irisMat);
-    iris.position.set(xPos, 0.02, 0.25);
+    const iris = new THREE.Mesh(new THREE.CircleGeometry(0.018, 10), irisMat);
+    iris.position.set(xEye, 0.02, 0.178);
     head.add(iris);
 
-    // Highlight
-    const gleamGeo = new THREE.CircleGeometry(0.009, 8);
-    const gleam = new THREE.Mesh(gleamGeo, pupilGleamMat);
-    gleam.position.set(xPos + 0.008, 0.028, 0.252);
+    const gleam = new THREE.Mesh(new THREE.CircleGeometry(0.006, 6), gleamMat);
+    gleam.position.set(xEye + 0.005, 0.026, 0.18);
     head.add(gleam);
 
-    // Eyebrow
-    const browGeo = new THREE.BoxGeometry(0.08, 0.015, 0.02);
-    const brow = new THREE.Mesh(browGeo, hairMat);
-    brow.position.set(xPos, 0.075, 0.235);
-    brow.rotation.z = xPos < 0 ? 0.08 : -0.08;
+    // Natural Contoured Eyebrows (NO crude black blocks!)
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.008, 0.01), hairMat);
+    brow.position.set(xEye, 0.058, 0.17);
+    brow.rotation.z = xEye < 0 ? 0.08 : -0.08;
     head.add(brow);
   });
 
-  // Nose (Subtle contoured bridge)
-  const noseGeo = new THREE.ConeGeometry(0.035, 0.08, 6);
-  const nose = new THREE.Mesh(noseGeo, skinMat);
-  nose.position.set(0, -0.02, 0.26);
-  nose.rotation.x = 0.2;
+  // Nose Bridge & Friendly Smile
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.06, 5), skinMat);
+  nose.position.set(0, -0.015, 0.19);
+  nose.rotation.x = 0.25;
   head.add(nose);
 
-  // Gentle friendly smile
-  const mouthGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.015, 8, 1, false, 0, Math.PI);
-  const mouthMat = new THREE.MeshBasicMaterial({ color: 0x9f1239 });
-  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
-  mouth.rotation.set(Math.PI / 2, 0, 0);
-  mouth.position.set(0, -0.08, 0.235);
-  head.add(mouth);
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.028, 0.006, 4, 10, Math.PI),
+    new THREE.MeshBasicMaterial({ color: 0x881337 })
+  );
+  smile.rotation.set(Math.PI, 0, 0);
+  smile.position.set(0, -0.06, 0.17);
+  head.add(smile);
 
   // -----------------------------------------------------------------------
-  // ARMS & HANDS (Articulated upper & forearm groups)
+  // ARMS & HANDS (Shoulder -> Bicep -> Elbow -> Forearm -> Articulated Fingers)
   // -----------------------------------------------------------------------
-  const createArm = (isLeft: boolean) => {
-    const armGroup = new THREE.Group();
+  const createArticulatedArm = (isLeft: boolean) => {
     const side = isLeft ? -1 : 1;
-    armGroup.position.set(side * 0.38, 1.25 * scale, 0);
+    const shoulderJoint = new THREE.Group();
+    shoulderJoint.position.set(side * 0.30, 0.42, 0);
 
-    // Shoulder Pauldron / Sleeve
-    const shoulderGeo = new THREE.SphereGeometry(0.12, 12, 12);
-    const shoulder = new THREE.Mesh(shoulderGeo, kurtaMat);
-    armGroup.add(shoulder);
+    // Deltoid
+    const deltoid = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10), kurtaMat);
+    shoulderJoint.add(deltoid);
 
-    // Upper Arm
-    const upperArmGeo = new THREE.CylinderGeometry(0.09, 0.08, 0.32, 12);
-    const upperArm = new THREE.Mesh(upperArmGeo, kurtaMat);
-    upperArm.position.y = -0.16;
-    upperArm.castShadow = true;
-    armGroup.add(upperArm);
+    // Bicep / Upper Arm
+    const bicep = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.26, 10), kurtaMat);
+    bicep.position.y = -0.13;
+    bicep.castShadow = true;
+    shoulderJoint.add(bicep);
+
+    // Elbow Joint (crucial for natural arm bend)
+    const elbowJoint = new THREE.Group();
+    elbowJoint.position.set(0, -0.26, 0);
+    shoulderJoint.add(elbowJoint);
 
     // Forearm
-    const forearmGroup = new THREE.Group();
-    forearmGroup.position.set(0, -0.32, 0);
-    armGroup.add(forearmGroup);
-
-    const forearmGeo = new THREE.CylinderGeometry(0.075, 0.065, 0.28, 12);
-    const forearm = new THREE.Mesh(forearmGeo, kurtaMat);
-    forearm.position.y = -0.14;
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.24, 10), kurtaMat);
+    forearm.position.y = -0.12;
     forearm.castShadow = true;
-    forearmGroup.add(forearm);
+    elbowJoint.add(forearm);
 
-    // Gold Kada / Cuff on right wrist
-    if (!isLeft) {
-      const kadaGeo = new THREE.TorusGeometry(0.072, 0.015, 8, 16);
-      const kada = new THREE.Mesh(kadaGeo, goldAccentMat);
-      kada.rotation.x = Math.PI / 2;
-      kada.position.y = -0.27;
-      forearmGroup.add(kada);
-    }
+    // Wrist & Articulated Hand
+    const wrist = new THREE.Group();
+    wrist.position.set(0, -0.24, 0);
+    elbowJoint.add(wrist);
 
-    // Hand with articulated thumb
-    const handGeo = new THREE.SphereGeometry(0.065, 10, 10);
-    handGeo.scale(0.8, 1.1, 0.5);
-    const hand = new THREE.Mesh(handGeo, skinMat);
-    hand.position.set(0, -0.34, 0);
-    forearmGroup.add(hand);
+    // Palm
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.07, 0.035), skinMat);
+    palm.position.y = -0.035;
+    wrist.add(palm);
 
-    proceduralGroup.add(armGroup);
-    return armGroup;
+    // Articulated Fingers
+    [-0.02, -0.006, 0.008, 0.022].forEach((xOff, fIdx) => {
+      const fingerLen = fIdx === 1 || fIdx === 2 ? 0.045 : 0.038;
+      const finger = new THREE.Mesh(new THREE.BoxGeometry(0.012, fingerLen, 0.012), skinMat);
+      finger.position.set(xOff, -0.07 - fingerLen / 2, 0);
+      wrist.add(finger);
+    });
+
+    // Thumb
+    const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.035, 0.014), skinMat);
+    thumb.position.set(side * 0.032, -0.03, 0.015);
+    thumb.rotation.z = side * -0.4;
+    wrist.add(thumb);
+
+    torso.add(shoulderJoint);
+    return { shoulderJoint, elbowJoint, wrist };
   };
 
-  const leftArm = createArm(true);
-  const rightArm = createArm(false);
+  const leftArmData = createArticulatedArm(true);
+  const rightArmData = createArticulatedArm(false);
+
+  const leftArm = leftArmData.shoulderJoint;
+  const leftElbow = leftArmData.elbowJoint;
+  const rightArm = rightArmData.shoulderJoint;
+  const rightElbow = rightArmData.elbowJoint;
 
   // -----------------------------------------------------------------------
-  // LEGS & FESTIVE JUTTIS (Churidar with tailored folds)
-  // Perfectly calibrated to ground y = 0.00 (Zero sinking / zero floating)
+  // LEGS WITH ARTICULATED KNEE JOINTS & FOOT-PLANTING ANKLES (THE CORE FIX!)
   // -----------------------------------------------------------------------
-  const createLeg = (isLeft: boolean) => {
-    const legGroup = new THREE.Group();
+  const createArticulatedLeg = (isLeft: boolean) => {
     const side = isLeft ? -1 : 1;
-    legGroup.position.set(side * 0.16, 0.85 * scale, 0);
 
-    // Thigh
-    const thighGeo = new THREE.CylinderGeometry(0.12, 0.095, 0.42, 12);
-    const thigh = new THREE.Mesh(thighGeo, pajamaMat);
-    thigh.position.y = -0.21;
+    // Hip Joint Group (Pivots forward & back)
+    const hipJoint = new THREE.Group();
+    hipJoint.position.set(side * 0.13, -0.08, 0);
+
+    // Upper Thigh
+    const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.075, 0.38, 12), pajamaMat);
+    thigh.position.y = -0.19;
     thigh.castShadow = true;
-    legGroup.add(thigh);
+    hipJoint.add(thigh);
 
-    // Shin / Calf
-    const calfGeo = new THREE.CylinderGeometry(0.095, 0.075, 0.42, 12);
-    const calf = new THREE.Mesh(calfGeo, pajamaMat);
-    calf.position.y = -0.63;
-    calf.castShadow = true;
-    legGroup.add(calf);
+    // Knee Joint Group (Bends backward during swing!)
+    const kneeJoint = new THREE.Group();
+    kneeJoint.position.set(0, -0.38, 0);
+    hipJoint.add(kneeJoint);
 
-    // Festive Mojari / Jutti with curved toe (Sole perfectly rests at y = 0.00)
+    // Knee cap
+    const kneeCap = new THREE.Mesh(new THREE.SphereGeometry(0.072, 8, 8), pajamaMat);
+    kneeJoint.add(kneeCap);
+
+    // Calf & Shin
+    const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.055, 0.38, 12), pajamaMat);
+    shin.position.y = -0.19;
+    shin.castShadow = true;
+    kneeJoint.add(shin);
+
+    // Ankle Joint Group (Pivots to keep foot flat on ground)
+    const ankleJoint = new THREE.Group();
+    ankleJoint.position.set(0, -0.38, 0);
+    kneeJoint.add(ankleJoint);
+
+    // Shoe Group (Mojari / Sneaker perfectly grounded at y = 0.00)
     const shoeGroup = new THREE.Group();
-    shoeGroup.position.set(0, -0.805, 0.04);
-
-    const shoeBodyGeo = new THREE.BoxGeometry(0.14, 0.09, 0.28);
-    const shoeBody = new THREE.Mesh(shoeBodyGeo, juttiMat);
+    const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.065, 0.24), juttiMat);
+    shoeBody.position.set(0, 0.032, 0.04);
     shoeGroup.add(shoeBody);
 
-    const toeGeo = new THREE.ConeGeometry(0.07, 0.1, 8);
-    const toe = new THREE.Mesh(toeGeo, goldAccentMat);
-    toe.rotation.x = -Math.PI / 2.3;
-    toe.position.set(0, 0.01, 0.15);
-    shoeGroup.add(toe);
+    const toeCap = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.08, 8), goldAccentMat);
+    toeCap.rotation.x = -Math.PI / 2.2;
+    toeCap.position.set(0, 0.02, 0.15);
+    shoeGroup.add(toeCap);
 
-    legGroup.add(shoeGroup);
-    proceduralGroup.add(legGroup);
-    return legGroup;
+    ankleJoint.add(shoeGroup);
+    pelvis.add(hipJoint);
+
+    return { hipJoint, kneeJoint, ankleJoint, shoeGroup };
   };
 
-  const leftLeg = createLeg(true);
-  const rightLeg = createLeg(false);
+  const leftLegData = createArticulatedLeg(true);
+  const rightLegData = createArticulatedLeg(false);
+
+  const leftLeg = leftLegData.hipJoint;
+  const leftKnee = leftLegData.kneeJoint;
+  const leftAnkle = leftLegData.ankleJoint;
+
+  const rightLeg = rightLegData.hipJoint;
+  const rightKnee = rightLegData.kneeJoint;
+  const rightAnkle = rightLegData.ankleJoint;
 
   // -----------------------------------------------------------------------
-  // ANIMATION & STATE (Walking, Idle Breathing, Prayer, and Natural Sitting)
+  // BIOMECHANICAL ANIMATION SYSTEM (Walking, Bending Knees, Hand-Holding, Sitting)
   // -----------------------------------------------------------------------
   let walkPhase = 0;
-  let isPraying = false;
   let isSitting = false;
+  let isPraying = false;
+  let isHoldingHands = true;
 
   const setPraying = (praying: boolean) => {
     isPraying = praying;
+    if (praying) isSitting = false;
   };
 
   const setSitting = (sitting: boolean) => {
     isSitting = sitting;
-    if (sitting) {
-      isPraying = false;
-    } else {
-      leftLeg.position.set(-0.16, 0.85, 0);
-      rightLeg.position.set(0.16, 0.85, 0);
-    }
+    if (sitting) isPraying = false;
   };
 
-  const updateAnimation = (isWalking: boolean, time: number) => {
-    // 1. Realistic 3D Model Procedural Animation
+  const setHoldingHands = (holding: boolean) => {
+    isHoldingHands = holding;
+  };
+
+  const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
+    // 1. External 3D Model Procedural Animation (if active)
     if (customModelGroup.visible) {
       if (isSitting) {
-        // Comfortably seated on sofa/bed with natural recline
         const sitBreath = Math.sin(time * 2.0) * 0.008;
         customModelGroup.position.set(0, -0.42 + sitBreath, 0.12);
         customModelGroup.rotation.set(0.12, 0, 0);
       } else if (isPraying) {
-        // Reverent bow before sanctum
         const prayBreath = Math.sin(time * 2.0) * 0.01;
         customModelGroup.position.set(0, prayBreath, 0);
         customModelGroup.rotation.set(0.18, 0, 0);
@@ -372,111 +411,202 @@ export function createAalekhCharacter(): CharacterRig {
         const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.055;
         const tilt = Math.sin(walkPhase) * 0.035;
         const sway = Math.cos(walkPhase) * 0.025;
-        // Aalekh walks hand-in-hand: gentle lean towards Sana and synchronized stride
         customModelGroup.position.set(0, bounce, 0);
-        customModelGroup.rotation.set(tilt, -0.05 + sway * 0.3, -0.02);
+        customModelGroup.rotation.set(tilt, isHoldingHands ? -0.05 + sway * 0.3 : sway * 0.5, isHoldingHands ? -0.02 : 0);
       } else {
         const breath = Math.sin(time * 2.2) * 0.012;
         customModelGroup.position.set(0, breath, 0);
-        customModelGroup.rotation.set(0, -0.04, -0.015);
+        customModelGroup.rotation.set(0, isHoldingHands ? -0.04 : 0, isHoldingHands ? -0.015 : 0);
       }
       return;
     }
 
+    // 2. SOFA / FURNITURE SITTING (No body clipping, thighs flat on cushion, knees bent 90°)
     if (isSitting) {
-      // Natural Seated Pose on Sofa / Chair
-      const sitBreath = Math.sin(time * 2.0) * 0.012;
-      torso.position.y = 0.58 + sitBreath;
-      head.position.y = 1.15 + sitBreath;
-      leftLeg.position.set(-0.2, 0.48, 0.15);
-      rightLeg.position.set(0.2, 0.48, 0.15);
+      const sitBreath = Math.sin(time * 2.0) * 0.008;
+      pelvis.position.set(0, 0.46 + sitBreath, 0);
+      pelvis.rotation.set(0, 0, 0);
+
+      torso.rotation.set(-0.06, 0, 0); // Gentle resting recline against sofa backrest
+      head.rotation.set(0.04, isHoldingHands ? -0.08 : 0, 0); // Watching TV north & gentle glance at Sana
+
+      // Thighs extend horizontally forward across cushion
+      leftLeg.position.set(-0.14, -0.04, 0);
+      rightLeg.position.set(0.14, -0.04, 0);
       leftLeg.rotation.set(-Math.PI / 2, 0, 0);
       rightLeg.rotation.set(-Math.PI / 2, 0, 0);
-      leftArm.rotation.set(0.65, 0.15, 0.2);
-      rightArm.rotation.set(0.65, -0.15, -0.2);
-      torso.rotation.set(0, 0, 0);
-      head.rotation.set(0.04, 0, 0);
+
+      // Knees bend 90 degrees downward over cushion front edge
+      leftKnee.rotation.set(Math.PI / 2, 0, 0);
+      rightKnee.rotation.set(Math.PI / 2, 0, 0);
+
+      // Feet rest flat on floor
+      leftAnkle.rotation.set(0, 0, 0);
+      rightAnkle.rotation.set(0, 0, 0);
+
+      // Left Arm: rests comfortably on thigh
+      leftArm.rotation.set(0.45, 0.15, 0.2);
+      leftElbow.rotation.set(0.65, 0, 0);
+
+      // Right Arm: clasped with Sana on center cushion or resting lovingly
+      if (isHoldingHands) {
+        rightArm.rotation.set(0.35, -0.25, -0.3);
+        rightElbow.rotation.set(0.45, 0, -0.15);
+      } else {
+        rightArm.rotation.set(0.45, -0.15, -0.2);
+        rightElbow.rotation.set(0.65, 0, 0);
+      }
       return;
     }
 
+    // 3. SACRED REVERENT PRAYER POSE (At Shiva Lingam & Hanuman Murti)
     if (isPraying) {
-      // Namaste Prayer Pose
-      leftArm.rotation.set(0.9, 0.45, 0.4);
-      rightArm.rotation.set(0.9, -0.45, -0.4);
-      head.rotation.set(0.12, 0, 0); // Gentle humble bow
-      const prayBreathe = Math.sin(time * 2.0) * 0.015;
-      torso.position.y = 1.05 + prayBreathe;
-      head.position.y = 1.62 + prayBreathe;
-      leftLeg.position.set(-0.16, 0.85, 0);
-      rightLeg.position.set(0.16, 0.85, 0);
+      const prayBreathe = Math.sin(time * 2.0) * 0.012;
+      pelvis.position.set(0, 0.90 + prayBreathe, 0);
+      pelvis.rotation.set(0, 0, 0);
+      torso.rotation.set(0.12, 0, 0);
+      head.rotation.set(0.15, 0, 0); // Humble head bow
+
       leftLeg.rotation.set(0, 0, 0);
       rightLeg.rotation.set(0, 0, 0);
+      leftKnee.rotation.set(0, 0, 0);
+      rightKnee.rotation.set(0, 0, 0);
+      leftAnkle.rotation.set(0, 0, 0);
+      rightAnkle.rotation.set(0, 0, 0);
+
+      // Anjali Mudra (Hands folded reverently at heart)
+      leftArm.rotation.set(0.85, 0.45, 0.35);
+      leftElbow.rotation.set(0.85, 0, 0);
+      rightArm.rotation.set(0.85, -0.45, -0.35);
+      rightElbow.rotation.set(0.85, 0, 0);
       return;
     }
 
-    leftLeg.position.set(-0.16, 0.85, 0);
-    rightLeg.position.set(0.16, 0.85, 0);
-
+    // 4. BIOMECHANICAL WALKING KINEMATICS (Alternating stride, bending knees, planted feet)
     if (isWalking) {
-      walkPhase += 0.18;
-      const legSwing = Math.sin(walkPhase) * 0.48;
-      const armSwing = Math.sin(walkPhase) * 0.42;
-      const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.06;
+      const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
+      walkPhase += 0.085 * strideSpeed;
 
-      leftLeg.rotation.x = legSwing;
-      rightLeg.rotation.x = -legSwing;
-      leftArm.rotation.x = -armSwing; // Outer arm swings freely
-      // Inner arm holds Sana's hand in sweet synchrony
-      rightArm.rotation.set(0.12 + Math.sin(walkPhase) * 0.14, -0.15, -0.22);
+      const thighSwing = Math.sin(walkPhase) * 0.48;
+      const leftThighAngle = thighSwing;
+      const rightThighAngle = -thighSwing;
 
-      // Natural spine rotation & body bounce
-      torso.rotation.y = Math.sin(walkPhase) * 0.08;
-      head.rotation.y = -Math.sin(walkPhase) * 0.05;
-      torso.position.y = 1.05 + bounce;
-      head.position.y = 1.62 + bounce;
+      // KNEE BENDING: Knee flexes backward when leg swings forward, straightens when planted!
+      const leftKneeBend = Math.max(0, -Math.sin(walkPhase + 0.35)) * 0.72;
+      const rightKneeBend = Math.max(0, Math.sin(walkPhase + 0.35)) * 0.72;
+
+      leftLeg.rotation.x = leftThighAngle;
+      rightLeg.rotation.x = rightThighAngle;
+
+      leftKnee.rotation.x = leftKneeBend;
+      rightKnee.rotation.x = rightKneeBend;
+
+      // ANKLE PLANTING: Counter-rotates so foot remains flat with ground
+      leftAnkle.rotation.x = -(leftThighAngle + leftKneeBend) * 0.55;
+      rightAnkle.rotation.x = -(rightThighAngle + rightKneeBend) * 0.55;
+
+      // Pelvic Bounce & Hip Roll
+      const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.045;
+      pelvis.position.y = 0.90 + bounce;
+      pelvis.rotation.z = Math.sin(walkPhase) * 0.025;
+      pelvis.rotation.y = Math.cos(walkPhase) * 0.035;
+
+      // Spine & Torso Counter-Torsion
+      torso.rotation.y = -Math.cos(walkPhase) * 0.04;
+      head.rotation.y = isHoldingHands ? -0.06 + Math.cos(walkPhase) * 0.02 : Math.cos(walkPhase) * 0.02;
+
+      // Outer Left Arm: Swings naturally in opposition to left leg
+      leftArm.rotation.x = -leftThighAngle * 0.75;
+      leftElbow.rotation.x = 0.25 + Math.max(0, leftThighAngle) * 0.4;
+
+      // Inner Right Arm: Holding Hands with Sana!
+      if (isHoldingHands) {
+        // Hand stays clasped with Sana, swinging gently in lovey-dovey unison
+        const handSwing = Math.sin(walkPhase) * 0.12;
+        rightArm.rotation.set(0.12 + handSwing, -0.16, -0.22);
+        rightElbow.rotation.set(0.18, 0, -0.12);
+      } else {
+        rightArm.rotation.x = leftThighAngle * 0.75;
+        rightElbow.rotation.x = 0.25 + Math.max(0, -leftThighAngle) * 0.4;
+      }
     } else {
-      // Idle Breathing
-      const breath = Math.sin(time * 2.2) * 0.018;
-      torso.position.y = 1.05 + breath;
-      head.position.y = 1.62 + breath;
+      // 5. NATURAL IDLE BREATHING & GROUNDED STANCE
+      const breath = Math.sin(time * 2.2) * 0.012;
+      pelvis.position.set(0, 0.90 + breath, 0);
+      pelvis.rotation.set(0, 0, 0);
 
-      // Relaxed limbs
+      torso.rotation.set(0, 0, 0);
+      head.rotation.set(0, isHoldingHands ? -0.06 : 0, isHoldingHands ? -0.015 : 0);
+
+      // Relaxed feet planted firmly on ground
       leftLeg.rotation.set(0, 0, 0);
       rightLeg.rotation.set(0, 0, 0);
+      leftKnee.rotation.set(0, 0, 0);
+      rightKnee.rotation.set(0, 0, 0);
+      leftAnkle.rotation.set(0, 0, 0);
+      rightAnkle.rotation.set(0, 0, 0);
+
+      // Arms: relaxed at sides or holding hands
       leftArm.rotation.set(0.05, 0, 0.06);
-      rightArm.rotation.set(0.05, 0, -0.06);
-      torso.rotation.set(0, 0, 0);
-      head.rotation.set(0, 0, 0);
+      leftElbow.rotation.set(0.12, 0, 0);
+
+      if (isHoldingHands) {
+        rightArm.rotation.set(0.08, -0.14, -0.22);
+        rightElbow.rotation.set(0.16, 0, -0.10);
+      } else {
+        rightArm.rotation.set(0.05, 0, -0.06);
+        rightElbow.rotation.set(0.12, 0, 0);
+      }
     }
   };
 
-  return { root, leftLeg, rightLeg, leftArm, rightArm, head, torso, setPraying, setSitting, updateAnimation };
+  return {
+    root,
+    pelvis,
+    leftLeg,
+    leftKnee,
+    leftAnkle,
+    rightLeg,
+    rightKnee,
+    rightAnkle,
+    leftArm,
+    leftElbow,
+    rightArm,
+    rightElbow,
+    head,
+    torso,
+    isCustomModelActive,
+    setPraying,
+    setSitting,
+    setHoldingHands,
+    updateAnimation,
+  };
 }
 
 // =========================================================================
-// 2. SHIRJANA (SANA) CHARACTER: Graceful Diwali Lehenga, Dupatta, & Gajra
+// 2. SANA (GIRL) CHARACTER: Graceful Articulated Rig with Bending Knees & Flared Lehenga
 // =========================================================================
 export function createShirjanaCharacter(): CharacterRig {
   const root = new THREE.Group();
-  root.name = "shirjanaCharacter";
+  root.name = "shirjanaCharacterRoot";
 
-  const scale = 0.95; // Harmonious height ratio
+  const scale = 0.94; // 1.65m graceful feminine proportion
 
-  // Materials
+  // High-End Materials
   const lehengaMat = new THREE.MeshStandardMaterial({
-    color: 0xf59e0b, // Radiant Marigold-Golden Silk
-    roughness: 0.42,
-    metalness: 0.25,
+    color: 0xd97706, // Radiant Amber Marigold Silk
+    roughness: 0.45,
+    metalness: 0.22,
   });
 
   const choliMat = new THREE.MeshStandardMaterial({
-    color: 0xe11d48, // Royal Crimson Velvet Choli
-    roughness: 0.5,
-    metalness: 0.15,
+    color: 0x9f1239, // Royal Velvet Crimson Choli
+    roughness: 0.48,
+    metalness: 0.18,
   });
 
   const dupattaMat = new THREE.MeshStandardMaterial({
-    color: 0xf43f5e, // Rose pink sheer festive dupatta
+    color: 0xf43f5e, // Sheer Rose Pink Festive Dupatta
     roughness: 0.35,
     metalness: 0.1,
     transparent: true,
@@ -484,23 +614,26 @@ export function createShirjanaCharacter(): CharacterRig {
   });
 
   const goldZariMat = new THREE.MeshStandardMaterial({
-    color: 0xfcd34d, // Ornate Gold Zari Border
+    color: 0xfcd34d, // Heavy Gold Zari Embroidery
     roughness: 0.25,
-    metalness: 0.75,
+    metalness: 0.8,
   });
 
   const skinMat = new THREE.MeshStandardMaterial({
-    color: 0xfde047, // Glowing fair skin with festive radiance
+    color: 0xe8ad88, // Glowing delicate Indian complexion
     roughness: 0.5,
+    metalness: 0.05,
   });
 
   const hairMat = new THREE.MeshStandardMaterial({
     color: 0x0f172a, // Silky jet-black hair
-    roughness: 0.7,
+    roughness: 0.6,
+    metalness: 0.25,
   });
 
-  const flowerMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Jasmine Gajra
+  const flowerMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Fresh Jasmine Gajra
 
+  // Groups
   const proceduralGroup = new THREE.Group();
   proceduralGroup.name = "proceduralSanaRig";
   root.add(proceduralGroup);
@@ -510,280 +643,326 @@ export function createShirjanaCharacter(): CharacterRig {
   customModelGroup.visible = false;
   root.add(customModelGroup);
 
-  // Asynchronously load realistic 3D girl model (Sana) from public/
+  let isCustomModelActive = false;
+
+  // Asynchronously load external 3D girl model if available
   loadGirlCharacterModel()
     .then((customModel) => {
       customModelGroup.add(customModel);
       customModelGroup.visible = true;
       proceduralGroup.visible = false;
+      isCustomModelActive = true;
     })
-    .catch((err) => {
-      console.warn("Using procedural Sana fallback rig:", err);
+    .catch(() => {
+      proceduralGroup.visible = true;
+      isCustomModelActive = false;
     });
 
   // -----------------------------------------------------------------------
-  // TORSO & CHOLI (Feminine silhouette with sweetheart neckline)
+  // PELVIS / HIPS & DYNAMIC LEHENGA SKIRT
   // -----------------------------------------------------------------------
-  const torso = new THREE.Group();
-  torso.position.y = 1.05 * scale;
-  proceduralGroup.add(torso);
+  const pelvis = new THREE.Group();
+  pelvis.position.y = 0.85 * scale;
+  proceduralGroup.add(pelvis);
 
-  // Choli (Tailored velvet blouse)
-  const choliGeo = new THREE.CylinderGeometry(0.24, 0.21, 0.42, 16);
-  const choli = new THREE.Mesh(choliGeo, choliMat);
-  choli.castShadow = true;
-  torso.add(choli);
+  // Feminine Waistband Kamarbandh
+  const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.21, 0.14, 16), choliMat);
+  pelvis.add(waist);
 
-  // Sweetheart neckline gold trim
-  const neckTrimGeo = new THREE.TorusGeometry(0.18, 0.016, 8, 16, Math.PI);
-  const neckTrim = new THREE.Mesh(neckTrimGeo, goldZariMat);
-  neckTrim.rotation.set(Math.PI / 2.2, 0, Math.PI);
-  neckTrim.position.set(0, 0.18, 0.14);
-  torso.add(neckTrim);
+  const goldWaistBand = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.016, 8, 20), goldZariMat);
+  goldWaistBand.rotation.x = Math.PI / 2;
+  pelvis.add(goldWaistBand);
 
-  // Elegant Flared Lehenga Skirt (Multi-tier sculpted festive skirt)
+  // Flared Tiered Lehenga Skirt (Articulated with leg movement!)
   const lehengaGroup = new THREE.Group();
-  lehengaGroup.position.set(0, -0.15, 0);
+  lehengaGroup.position.set(0, -0.06, 0);
 
-  // Upper hip flare
-  const hipGeo = new THREE.CylinderGeometry(0.22, 0.36, 0.35, 18);
-  const hip = new THREE.Mesh(hipGeo, lehengaMat);
-  hip.castShadow = true;
-  lehengaGroup.add(hip);
+  const hipTier = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.32, 0.30, 18), lehengaMat);
+  hipTier.position.y = -0.15;
+  hipTier.castShadow = true;
+  lehengaGroup.add(hipTier);
 
-  // Lower wide flared bell
-  const bellGeo = new THREE.ConeGeometry(0.58, 0.65, 20, 1, true);
+  // Wide Flared Bell
+  const bellGeo = new THREE.ConeGeometry(0.52, 0.55, 22, 1, true);
   const bell = new THREE.Mesh(bellGeo, lehengaMat);
   bell.rotation.x = Math.PI;
-  bell.position.y = -0.42;
+  bell.position.y = -0.38;
   bell.castShadow = true;
   lehengaGroup.add(bell);
 
-  // Heavy Gold Zari Hem Border around lehenga base
-  const hemGeo = new THREE.TorusGeometry(0.56, 0.035, 8, 24);
-  const hem = new THREE.Mesh(hemGeo, goldZariMat);
+  // Heavy Gold Zari Hem Border
+  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.50, 0.03, 8, 24), goldZariMat);
   hem.rotation.x = Math.PI / 2;
-  hem.position.y = -0.74;
+  hem.position.y = -0.66;
   lehengaGroup.add(hem);
 
-  torso.add(lehengaGroup);
-
-  // Sheer Rose Dupatta draped diagonally across torso
-  const dupattaDrapeGeo = new THREE.CylinderGeometry(0.18, 0.26, 0.75, 8, 1, true, 0, Math.PI * 1.2);
-  const dupattaDrape = new THREE.Mesh(dupattaDrapeGeo, dupattaMat);
-  dupattaDrape.position.set(-0.06, 0.02, 0.08);
-  dupattaDrape.rotation.set(0.2, 0.3, -0.4);
-  torso.add(dupattaDrape);
+  pelvis.add(lehengaGroup);
 
   // -----------------------------------------------------------------------
-  // HEAD, BEAUTIFUL FACE & GAJRA (Expressive, delicate features)
+  // TORSO & CHOLI (Feminine silhouette with sweetheart neckline & sheer dupatta)
+  // -----------------------------------------------------------------------
+  const torso = new THREE.Group();
+  torso.position.y = 0.12;
+  pelvis.add(torso);
+
+  const choli = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.18, 0.36, 16), choliMat);
+  choli.position.y = 0.18;
+  choli.castShadow = true;
+  torso.add(choli);
+
+  // Gold neckline trim
+  const neckTrim = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.012, 6, 16, Math.PI), goldZariMat);
+  neckTrim.rotation.set(Math.PI / 2.2, 0, Math.PI);
+  neckTrim.position.set(0, 0.34, 0.11);
+  torso.add(neckTrim);
+
+  // Sheer Rose Dupatta draped gracefully across torso
+  const dupatta = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.24, 0.65, 8, 1, true, 0, Math.PI * 1.2),
+    dupattaMat
+  );
+  dupatta.position.set(-0.04, 0.16, 0.06);
+  dupatta.rotation.set(0.15, 0.25, -0.35);
+  torso.add(dupatta);
+
+  // -----------------------------------------------------------------------
+  // HEAD, BEAUTIFUL FACE, JEWELRY & JASMINE GAJRA
   // -----------------------------------------------------------------------
   const head = new THREE.Group();
-  head.position.set(0, 1.58 * scale, 0);
-  proceduralGroup.add(head);
+  head.position.set(0, 0.54 * scale, 0);
+  torso.add(head);
 
   // Graceful neck
-  const neckGeo = new THREE.CylinderGeometry(0.09, 0.11, 0.18, 12);
-  const neck = new THREE.Mesh(neckGeo, skinMat);
-  neck.position.y = -0.14;
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.14, 12), skinMat);
+  neck.position.y = -0.07;
   head.add(neck);
 
-  // Gold necklace
-  const necklaceGeo = new THREE.TorusGeometry(0.11, 0.015, 8, 16);
-  const necklace = new THREE.Mesh(necklaceGeo, goldZariMat);
+  // Gold Necklace
+  const necklace = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.012, 6, 16), goldZariMat);
   necklace.rotation.x = Math.PI / 2;
-  necklace.position.y = -0.12;
+  necklace.position.y = -0.05;
   head.add(necklace);
 
-  // Head/Face shape (Contoured feminine jawline)
-  const faceGeo = new THREE.SphereGeometry(0.22, 20, 20);
-  faceGeo.scale(0.95, 1.1, 0.98);
-  const face = new THREE.Mesh(faceGeo, skinMat);
-  face.castShadow = true;
-  head.add(face);
+  // Sculpted Feminine Head
+  const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 20), skinMat);
+  headMesh.scale.set(0.92, 1.12, 1.0);
+  headMesh.castShadow = true;
+  head.add(headMesh);
 
-  // Voluminous hairstyle with soft front parting
-  const hairBaseGeo = new THREE.SphereGeometry(0.24, 18, 18);
-  hairBaseGeo.scale(0.98, 1.12, 1.05);
-  const hairBase = new THREE.Mesh(hairBaseGeo, hairMat);
-  hairBase.position.set(0, 0.04, -0.04);
-  head.add(hairBase);
+  // Silky Long Dark Flowing Hair
+  const hairGroup = new THREE.Group();
+  const hairCrown = new THREE.Mesh(
+    new THREE.SphereGeometry(0.175, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.6),
+    hairMat
+  );
+  hairCrown.scale.set(0.96, 1.08, 1.04);
+  hairCrown.position.set(0, 0.03, -0.01);
+  hairGroup.add(hairCrown);
 
-  // Long Traditional Braided Plait cascading down the back
-  const braidGroup = new THREE.Group();
-  braidGroup.position.set(0, -0.1, -0.2);
-  for (let i = 0; i < 7; i++) {
-    const segmentRadius = 0.075 - i * 0.007;
-    const segGeo = new THREE.SphereGeometry(segmentRadius, 8, 8);
-    const seg = new THREE.Mesh(segGeo, hairMat);
-    seg.position.y = -i * 0.1;
-    braidGroup.add(seg);
-  }
-  head.add(braidGroup);
-
-  // Fragrant Jasmine Flower Gajra encircling hair bun
-  const gajraGeo = new THREE.TorusGeometry(0.16, 0.035, 8, 18);
-  const gajra = new THREE.Mesh(gajraGeo, flowerMat);
-  gajra.position.set(0, 0.06, -0.16);
-  gajra.rotation.x = 0.6;
-  head.add(gajra);
-
-  // Expressive Almond Eyes & Long Eyelashes
-  const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const irisMat = new THREE.MeshBasicMaterial({ color: 0x1c1917 });
-  const gleamMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-
-  [-0.075, 0.075].forEach((xPos) => {
-    // Eye white
-    const eyeWhiteGeo = new THREE.SphereGeometry(0.036, 10, 10);
-    eyeWhiteGeo.scale(1.2, 0.85, 0.4);
-    const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-    eyeWhite.position.set(xPos, 0.02, 0.2);
-    head.add(eyeWhite);
-
-    // Deep warm brown iris
-    const irisGeo = new THREE.CircleGeometry(0.024, 10);
-    const iris = new THREE.Mesh(irisGeo, irisMat);
-    iris.position.set(xPos, 0.02, 0.22);
-    head.add(iris);
-
-    // Catchlight highlight
-    const gleamGeo = new THREE.CircleGeometry(0.008, 8);
-    const gleam = new THREE.Mesh(gleamGeo, gleamMat);
-    gleam.position.set(xPos + 0.007, 0.028, 0.222);
-    head.add(gleam);
-
-    // Arched Eyebrow
-    const browGeo = new THREE.BoxGeometry(0.07, 0.012, 0.02);
-    const brow = new THREE.Mesh(browGeo, hairMat);
-    brow.position.set(xPos, 0.07, 0.205);
-    brow.rotation.z = xPos < 0 ? 0.06 : -0.06;
-    head.add(brow);
-
-    // Golden Jhumka Earring
-    const jhumkaGroup = new THREE.Group();
-    jhumkaGroup.position.set(xPos * 2.8, -0.06, 0);
-    const stud = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), goldZariMat);
-    jhumkaGroup.add(stud);
-    const bellMesh = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.05, 8), goldZariMat);
-    bellMesh.position.y = -0.04;
-    bellMesh.rotation.x = Math.PI;
-    jhumkaGroup.add(bellMesh);
-    head.add(jhumkaGroup);
+  // Flowing hair strands cascading past shoulders
+  [-0.12, 0.12].forEach((xSide) => {
+    const strand = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.02, 0.45, 8), hairMat);
+    strand.position.set(xSide, -0.16, 0.02);
+    strand.rotation.z = xSide < 0 ? -0.15 : 0.15;
+    hairGroup.add(strand);
   });
 
-  // Delicate Bindi between eyebrows
-  const bindiGeo = new THREE.CircleGeometry(0.012, 8);
-  const bindi = new THREE.Mesh(bindiGeo, new THREE.MeshBasicMaterial({ color: 0xbe123c }));
-  bindi.position.set(0, 0.065, 0.222);
+  // Fragrant Jasmine Gajra Flowers wrapped in hair
+  for (let f = 0; f < 8; f++) {
+    const angle = (f / 8) * Math.PI * 1.4 - Math.PI * 0.7;
+    const flower = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 6), flowerMat);
+    flower.position.set(Math.sin(angle) * 0.15, 0.08, -Math.cos(angle) * 0.14);
+    hairGroup.add(flower);
+  }
+  head.add(hairGroup);
+
+  // Expressive Hazel Almond Eyes
+  const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const irisMat = new THREE.MeshBasicMaterial({ color: 0x452310 }); // Warm hazel iris
+  const gleamMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+  [-0.048, 0.048].forEach((xEye) => {
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), eyeWhiteMat);
+    eyeWhite.scale.set(1.15, 0.75, 0.35);
+    eyeWhite.position.set(xEye, 0.02, 0.152);
+    head.add(eyeWhite);
+
+    const iris = new THREE.Mesh(new THREE.CircleGeometry(0.016, 10), irisMat);
+    iris.position.set(xEye, 0.02, 0.164);
+    head.add(iris);
+
+    const gleam = new THREE.Mesh(new THREE.CircleGeometry(0.005, 6), gleamMat);
+    gleam.position.set(xEye + 0.004, 0.025, 0.166);
+    head.add(gleam);
+
+    // Delicate Arch Eyebrows
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.006, 0.008), hairMat);
+    brow.position.set(xEye, 0.052, 0.155);
+    brow.rotation.z = xEye < 0 ? 0.06 : -0.06;
+    head.add(brow);
+
+    // Sparkling Gold Jhumka Earrings
+    const earring = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.045, 6), goldZariMat);
+    earring.position.set(xEye < 0 ? -0.16 : 0.16, -0.04, 0.01);
+    head.add(earring);
+  });
+
+  // Sparkling Red Bindi & Rosy Lips
+  const bindi = new THREE.Mesh(
+    new THREE.CircleGeometry(0.008, 8),
+    new THREE.MeshBasicMaterial({ color: 0xbe123c })
+  );
+  bindi.position.set(0, 0.045, 0.166);
   head.add(bindi);
 
-  // Soft smiling lips
-  const lipsGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.014, 8, 1, false, 0, Math.PI);
-  const lips = new THREE.Mesh(lipsGeo, new THREE.MeshBasicMaterial({ color: 0xbe123c }));
-  lips.rotation.set(Math.PI / 2, 0, 0);
-  lips.position.set(0, -0.07, 0.205);
+  const lips = new THREE.Mesh(
+    new THREE.TorusGeometry(0.024, 0.006, 4, 10, Math.PI),
+    new THREE.MeshBasicMaterial({ color: 0xbe123c })
+  );
+  lips.rotation.set(Math.PI, 0, 0);
+  lips.position.set(0, -0.055, 0.155);
   head.add(lips);
 
   // -----------------------------------------------------------------------
-  // ARMS & BANGLES
+  // ARMS & HANDS (Articulated Shoulders -> Elbows -> Wrists with Gold Bangles)
   // -----------------------------------------------------------------------
-  const createSanaArm = (isLeft: boolean) => {
-    const armGroup = new THREE.Group();
+  const createArticulatedSanaArm = (isLeft: boolean) => {
     const side = isLeft ? -1 : 1;
-    armGroup.position.set(side * 0.32, 1.2 * scale, 0);
+    const shoulderJoint = new THREE.Group();
+    shoulderJoint.position.set(side * 0.24, 0.34, 0);
 
-    // Puffed Choli Sleeve
-    const sleeveGeo = new THREE.SphereGeometry(0.1, 10, 10);
-    const sleeve = new THREE.Mesh(sleeveGeo, choliMat);
-    armGroup.add(sleeve);
+    const shoulderCap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 8), choliMat);
+    shoulderJoint.add(shoulderCap);
 
-    // Bare Upper Arm
-    const upperArmGeo = new THREE.CylinderGeometry(0.065, 0.058, 0.28, 10);
-    const upperArm = new THREE.Mesh(upperArmGeo, skinMat);
-    upperArm.position.y = -0.15;
-    upperArm.castShadow = true;
-    armGroup.add(upperArm);
+    const bicep = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.044, 0.24, 10), skinMat);
+    bicep.position.y = -0.12;
+    bicep.castShadow = true;
+    shoulderJoint.add(bicep);
 
-    // Forearm with Gold Bangles
-    const forearmGroup = new THREE.Group();
-    forearmGroup.position.set(0, -0.28, 0);
-    armGroup.add(forearmGroup);
+    const elbowJoint = new THREE.Group();
+    elbowJoint.position.set(0, -0.24, 0);
+    shoulderJoint.add(elbowJoint);
 
-    const forearmGeo = new THREE.CylinderGeometry(0.058, 0.05, 0.26, 10);
-    const forearm = new THREE.Mesh(forearmGeo, skinMat);
-    forearm.position.y = -0.13;
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.038, 0.22, 10), skinMat);
+    forearm.position.y = -0.11;
     forearm.castShadow = true;
-    forearmGroup.add(forearm);
+    elbowJoint.add(forearm);
 
-    // Bangles (Choodiyan)
+    // Traditional Gold Glass Bangles (Choodiyan)
     for (let b = 0; b < 3; b++) {
-      const bangle = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.008, 6, 12), goldZariMat);
+      const bangle = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.006, 4, 12), goldZariMat);
       bangle.rotation.x = Math.PI / 2;
-      bangle.position.y = -0.18 - b * 0.022;
-      forearmGroup.add(bangle);
+      bangle.position.y = -0.14 - b * 0.018;
+      elbowJoint.add(bangle);
     }
 
-    // Hand
-    const handGeo = new THREE.SphereGeometry(0.05, 8, 8);
-    handGeo.scale(0.8, 1.1, 0.5);
-    const hand = new THREE.Mesh(handGeo, skinMat);
-    hand.position.set(0, -0.3, 0);
-    forearmGroup.add(hand);
+    const wrist = new THREE.Group();
+    wrist.position.set(0, -0.22, 0);
+    elbowJoint.add(wrist);
 
-    proceduralGroup.add(armGroup);
-    return armGroup;
+    // Delicate Feminine Palm & Fingers
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.055, 0.028), skinMat);
+    palm.position.y = -0.028;
+    wrist.add(palm);
+
+    [-0.016, -0.005, 0.006, 0.017].forEach((xOff, fIdx) => {
+      const fingerLen = fIdx === 1 || fIdx === 2 ? 0.036 : 0.030;
+      const finger = new THREE.Mesh(new THREE.BoxGeometry(0.009, fingerLen, 0.009), skinMat);
+      finger.position.set(xOff, -0.055 - fingerLen / 2, 0);
+      wrist.add(finger);
+    });
+
+    torso.add(shoulderJoint);
+    return { shoulderJoint, elbowJoint, wrist };
   };
 
-  const leftArm = createSanaArm(true);
-  const rightArm = createSanaArm(false);
+  const leftArmData = createArticulatedSanaArm(true);
+  const rightArmData = createArticulatedSanaArm(false);
+
+  const leftArm = leftArmData.shoulderJoint;
+  const leftElbow = leftArmData.elbowJoint;
+  const rightArm = rightArmData.shoulderJoint;
+  const rightElbow = rightArmData.elbowJoint;
 
   // -----------------------------------------------------------------------
-  // LEGS (Hidden elegantly beneath flared lehenga)
+  // LEGS WITH ARTICULATED KNEE JOINTS & FOOT ANKLES (Beneath flared lehenga)
   // -----------------------------------------------------------------------
-  const createSanaLeg = (isLeft: boolean) => {
-    const legGroup = new THREE.Group();
+  const createArticulatedSanaLeg = (isLeft: boolean) => {
     const side = isLeft ? -1 : 1;
-    legGroup.position.set(side * 0.14, 0.65 * scale, 0);
+    const hipJoint = new THREE.Group();
+    hipJoint.position.set(side * 0.11, -0.08, 0);
 
-    const legGeo = new THREE.CylinderGeometry(0.08, 0.06, 0.65, 8);
-    const leg = new THREE.Mesh(legGeo, skinMat);
-    leg.position.y = -0.32;
-    legGroup.add(leg);
+    const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.06, 0.35, 10), skinMat);
+    thigh.position.y = -0.175;
+    thigh.castShadow = true;
+    hipJoint.add(thigh);
 
-    // Golden Payal (Anklet)
-    const payal = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.01, 6, 12), goldZariMat);
+    const kneeJoint = new THREE.Group();
+    kneeJoint.position.set(0, -0.35, 0);
+    hipJoint.add(kneeJoint);
+
+    const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.045, 0.35, 10), skinMat);
+    shin.position.y = -0.175;
+    shin.castShadow = true;
+    kneeJoint.add(shin);
+
+    // Delicate Golden Payal (Anklet)
+    const payal = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.008, 6, 12), goldZariMat);
     payal.rotation.x = Math.PI / 2;
-    payal.position.y = -0.62;
-    legGroup.add(payal);
+    payal.position.y = -0.32;
+    kneeJoint.add(payal);
 
-    proceduralGroup.add(legGroup);
-    return legGroup;
+    const ankleJoint = new THREE.Group();
+    ankleJoint.position.set(0, -0.35, 0);
+    kneeJoint.add(ankleJoint);
+
+    // Graceful festive mojari shoe
+    const shoeGroup = new THREE.Group();
+    const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.055, 0.20), goldZariMat);
+    shoeBody.position.set(0, 0.027, 0.03);
+    shoeGroup.add(shoeBody);
+
+    ankleJoint.add(shoeGroup);
+    pelvis.add(hipJoint);
+
+    return { hipJoint, kneeJoint, ankleJoint, shoeGroup };
   };
 
-  const leftLeg = createSanaLeg(true);
-  const rightLeg = createSanaLeg(false);
+  const leftLegData = createArticulatedSanaLeg(true);
+  const rightLegData = createArticulatedSanaLeg(false);
+
+  const leftLeg = leftLegData.hipJoint;
+  const leftKnee = leftLegData.kneeJoint;
+  const leftAnkle = leftLegData.ankleJoint;
+
+  const rightLeg = rightLegData.hipJoint;
+  const rightKnee = rightLegData.kneeJoint;
+  const rightAnkle = rightLegData.ankleJoint;
 
   // -----------------------------------------------------------------------
-  // ANIMATION & STATE
+  // BIOMECHANICAL ANIMATION SYSTEM (Walking, Bending Knees, Hand-Holding, Sitting)
   // -----------------------------------------------------------------------
   let walkPhase = 0;
-  let isPraying = false;
   let isSitting = false;
+  let isPraying = false;
+  let isHoldingHands = true;
 
   const setPraying = (praying: boolean) => {
     isPraying = praying;
+    if (praying) isSitting = false;
   };
 
   const setSitting = (sitting: boolean) => {
     isSitting = sitting;
-    if (sitting) {
-      isPraying = false;
-    }
+    if (sitting) isPraying = false;
   };
 
-  const updateAnimation = (isWalking: boolean, time: number) => {
-    // 1. Realistic 3D Girl Model Procedural Animation
+  const setHoldingHands = (holding: boolean) => {
+    isHoldingHands = holding;
+  };
+
+  const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
+    // 1. External 3D Model Procedural Animation (if active)
     if (customModelGroup.visible) {
       if (isSitting) {
         const sitBreath = Math.sin(time * 2.0) * 0.008;
@@ -798,75 +977,173 @@ export function createShirjanaCharacter(): CharacterRig {
         const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.048;
         const tilt = Math.sin(walkPhase) * 0.03;
         const sway = Math.cos(walkPhase) * 0.02;
-        // Sana walks hand-in-hand: gentle lean towards Aalekh and synchronized stride
         customModelGroup.position.set(0, bounce, 0);
-        customModelGroup.rotation.set(tilt, 0.05 - sway * 0.3, 0.02);
+        customModelGroup.rotation.set(tilt, isHoldingHands ? 0.05 - sway * 0.3 : -sway * 0.5, isHoldingHands ? 0.02 : 0);
       } else {
         const breath = Math.sin(time * 2.4) * 0.012;
         customModelGroup.position.set(0, breath, 0);
-        customModelGroup.rotation.set(0, 0.04, 0.015);
+        customModelGroup.rotation.set(0, isHoldingHands ? 0.04 : 0, isHoldingHands ? 0.015 : 0);
       }
       return;
     }
 
+    // 2. SOFA / FURNITURE SITTING (Beside Aalekh on the luxury sofa)
     if (isSitting) {
-      // Natural Seated Pose for Sana
-      const sitBreath = Math.sin(time * 2.0) * 0.01;
-      torso.position.y = 0.54 + sitBreath;
-      head.position.y = 1.08 + sitBreath;
-      lehengaGroup.rotation.set(0.35, 0, 0);
-      leftLeg.rotation.set(-Math.PI / 2.2, 0, 0);
-      rightLeg.rotation.set(-Math.PI / 2.2, 0, 0);
-      leftArm.rotation.set(0.5, 0.2, 0.15);
-      rightArm.rotation.set(0.5, -0.2, -0.15);
-      torso.rotation.set(0, 0, 0);
-      head.rotation.set(0.04, 0, 0);
+      const sitBreath = Math.sin(time * 2.0) * 0.008;
+      pelvis.position.set(0, 0.46 + sitBreath, 0);
+      pelvis.rotation.set(0, 0, 0);
+
+      torso.rotation.set(-0.06, 0, 0);
+      head.rotation.set(0.04, isHoldingHands ? 0.08 : 0, 0); // Watching TV north & gentle glance at Aalekh
+
+      lehengaGroup.rotation.set(0.35, 0, 0); // Flared lehenga settles gracefully on sofa seat
+
+      leftLeg.position.set(-0.12, -0.04, 0);
+      rightLeg.position.set(0.12, -0.04, 0);
+      leftLeg.rotation.set(-Math.PI / 2, 0, 0);
+      rightLeg.rotation.set(-Math.PI / 2, 0, 0);
+
+      leftKnee.rotation.set(Math.PI / 2, 0, 0);
+      rightKnee.rotation.set(Math.PI / 2, 0, 0);
+
+      leftAnkle.rotation.set(0, 0, 0);
+      rightAnkle.rotation.set(0, 0, 0);
+
+      // Inner Left Arm: clasped with Aalekh on center cushion
+      if (isHoldingHands) {
+        leftArm.rotation.set(0.35, 0.25, 0.3);
+        leftElbow.rotation.set(0.45, 0, 0.15);
+      } else {
+        leftArm.rotation.set(0.45, 0.15, 0.2);
+        leftElbow.rotation.set(0.65, 0, 0);
+      }
+
+      // Outer Right Arm: rests gracefully on lap/thigh
+      rightArm.rotation.set(0.45, -0.15, -0.2);
+      rightElbow.rotation.set(0.65, 0, 0);
       return;
     }
 
+    // 3. SACRED REVERENT PRAYER POSE
     if (isPraying) {
-      leftArm.rotation.set(0.85, 0.42, 0.35);
-      rightArm.rotation.set(0.85, -0.42, -0.35);
-      head.rotation.set(0.12, 0, 0);
-      const prayBreathe = Math.sin(time * 2.0) * 0.015;
-      torso.position.y = 1.05 + prayBreathe;
-      head.position.y = 1.58 + prayBreathe;
-      return;
-    }
+      const prayBreathe = Math.sin(time * 2.0) * 0.012;
+      pelvis.position.set(0, 0.85 + prayBreathe, 0);
+      pelvis.rotation.set(0, 0, 0);
+      torso.rotation.set(0.12, 0, 0);
+      head.rotation.set(0.15, 0, 0);
 
-    if (isWalking) {
-      walkPhase += 0.18;
-      const legSwing = Math.sin(walkPhase) * 0.45;
-      const armSwing = Math.sin(walkPhase) * 0.38;
-      const lehengaSway = Math.sin(walkPhase) * 0.12;
-
-      leftLeg.rotation.x = legSwing;
-      rightLeg.rotation.x = -legSwing;
-      // Inner arm holds Aalekh's hand in sweet synchrony
-      leftArm.rotation.set(0.12 + Math.sin(walkPhase) * 0.14, 0.15, 0.22);
-      rightArm.rotation.x = armSwing; // Outer arm swings freely
-
-      // Graceful lehenga flair sway
-      lehengaGroup.rotation.z = lehengaSway;
-      torso.rotation.y = Math.sin(walkPhase) * 0.06;
-      head.rotation.y = -Math.sin(walkPhase) * 0.04;
-      torso.position.y = 1.05 + Math.abs(Math.sin(walkPhase * 2)) * 0.05;
-      head.position.y = 1.58 + Math.abs(Math.sin(walkPhase * 2)) * 0.05;
-    } else {
-      const breath = Math.sin(time * 2.4) * 0.015;
-      torso.position.y = 1.05 + breath;
-      head.position.y = 1.58 + breath;
-      lehengaGroup.rotation.z = 0;
       leftLeg.rotation.set(0, 0, 0);
       rightLeg.rotation.set(0, 0, 0);
-      leftArm.rotation.set(0.04, 0, 0.05);
-      rightArm.rotation.set(0.04, 0, -0.05);
+      leftKnee.rotation.set(0, 0, 0);
+      rightKnee.rotation.set(0, 0, 0);
+      leftAnkle.rotation.set(0, 0, 0);
+      rightAnkle.rotation.set(0, 0, 0);
+
+      leftArm.rotation.set(0.85, 0.45, 0.35);
+      leftElbow.rotation.set(0.85, 0, 0);
+      rightArm.rotation.set(0.85, -0.45, -0.35);
+      rightElbow.rotation.set(0.85, 0, 0);
+      return;
+    }
+
+    // 4. BIOMECHANICAL WALKING KINEMATICS (Alternating stride, bending knees, planted feet)
+    if (isWalking) {
+      const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
+      walkPhase += 0.085 * strideSpeed;
+
+      const thighSwing = Math.sin(walkPhase) * 0.45;
+      const leftThighAngle = thighSwing;
+      const rightThighAngle = -thighSwing;
+
+      // KNEE BENDING: Knee flexes backward when leg swings forward!
+      const leftKneeBend = Math.max(0, -Math.sin(walkPhase + 0.35)) * 0.68;
+      const rightKneeBend = Math.max(0, Math.sin(walkPhase + 0.35)) * 0.68;
+
+      leftLeg.rotation.x = leftThighAngle;
+      rightLeg.rotation.x = rightThighAngle;
+
+      leftKnee.rotation.x = leftKneeBend;
+      rightKnee.rotation.x = rightKneeBend;
+
+      leftAnkle.rotation.x = -(leftThighAngle + leftKneeBend) * 0.55;
+      rightAnkle.rotation.x = -(rightThighAngle + rightKneeBend) * 0.55;
+
+      // Graceful lehenga flair dynamic sway
+      lehengaGroup.rotation.z = Math.sin(walkPhase) * 0.12;
+
+      // Pelvic Bounce & Hip Roll
+      const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.040;
+      pelvis.position.y = 0.85 + bounce;
+      pelvis.rotation.z = Math.sin(walkPhase) * 0.022;
+      pelvis.rotation.y = Math.cos(walkPhase) * 0.030;
+
+      torso.rotation.y = -Math.cos(walkPhase) * 0.035;
+      head.rotation.y = isHoldingHands ? 0.06 - Math.cos(walkPhase) * 0.02 : -Math.cos(walkPhase) * 0.02;
+
+      // Inner Left Arm: Holding Hands with Aalekh!
+      if (isHoldingHands) {
+        const handSwing = Math.sin(walkPhase) * 0.12;
+        leftArm.rotation.set(0.12 + handSwing, 0.16, 0.22);
+        leftElbow.rotation.set(0.18, 0, 0.12);
+      } else {
+        leftArm.rotation.x = -leftThighAngle * 0.70;
+        leftElbow.rotation.x = 0.22 + Math.max(0, leftThighAngle) * 0.35;
+      }
+
+      // Outer Right Arm: Swings naturally in opposition to leg
+      rightArm.rotation.x = leftThighAngle * 0.70;
+      rightElbow.rotation.x = 0.22 + Math.max(0, -leftThighAngle) * 0.35;
+    } else {
+      // 5. NATURAL IDLE BREATHING & GROUNDED STANCE
+      const breath = Math.sin(time * 2.4) * 0.012;
+      pelvis.position.set(0, 0.85 + breath, 0);
+      pelvis.rotation.set(0, 0, 0);
+      lehengaGroup.rotation.z = 0;
+
       torso.rotation.set(0, 0, 0);
-      head.rotation.set(0, 0, 0);
+      head.rotation.set(0, isHoldingHands ? 0.06 : 0, isHoldingHands ? 0.015 : 0);
+
+      leftLeg.rotation.set(0, 0, 0);
+      rightLeg.rotation.set(0, 0, 0);
+      leftKnee.rotation.set(0, 0, 0);
+      rightKnee.rotation.set(0, 0, 0);
+      leftAnkle.rotation.set(0, 0, 0);
+      rightAnkle.rotation.set(0, 0, 0);
+
+      if (isHoldingHands) {
+        leftArm.rotation.set(0.08, 0.14, 0.22);
+        leftElbow.rotation.set(0.16, 0, 0.10);
+      } else {
+        leftArm.rotation.set(0.04, 0, 0.05);
+        leftElbow.rotation.set(0.12, 0, 0);
+      }
+
+      rightArm.rotation.set(0.04, 0, -0.05);
+      rightElbow.rotation.set(0.12, 0, 0);
     }
   };
 
-  return { root, leftLeg, rightLeg, leftArm, rightArm, head, torso, setPraying, setSitting, updateAnimation };
+  return {
+    root,
+    pelvis,
+    leftLeg,
+    leftKnee,
+    leftAnkle,
+    rightLeg,
+    rightKnee,
+    rightAnkle,
+    leftArm,
+    leftElbow,
+    rightArm,
+    rightElbow,
+    head,
+    torso,
+    isCustomModelActive,
+    setPraying,
+    setSitting,
+    setHoldingHands,
+    updateAnimation,
+  };
 }
 
 // =========================================================================
@@ -876,114 +1153,113 @@ export function createBunnyCompanion(): BunnyRig {
   const root = new THREE.Group();
   root.name = "bunnyCompanion";
 
-  // Materials
   const furMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff, // Fluffy white fur
+    color: 0xffffff,
     roughness: 0.85,
+    metalness: 0.05,
   });
 
   const innerEarMat = new THREE.MeshStandardMaterial({
-    color: 0xfbcfe8, // Soft rosy pink inner ear
+    color: 0xfbcfe8, // Soft pink inner ear
     roughness: 0.6,
   });
 
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1e1b4b });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x831843 }); // Deep ruby eyes
   const noseMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
 
-  // Pear-shaped rounded body
-  const bodyGeo = new THREE.SphereGeometry(0.24, 16, 16);
-  bodyGeo.scale(0.9, 1.1, 1.25);
+  // Body: chubby rounded teardrop shape
+  const bodyGeo = new THREE.SphereGeometry(0.32, 16, 16);
+  bodyGeo.scale(0.85, 0.9, 1.15);
   const body = new THREE.Mesh(bodyGeo, furMat);
-  body.position.y = 0.22;
+  body.position.y = 0.28;
   body.castShadow = true;
   root.add(body);
 
-  // Chubby Cheeks Head
-  const headGeo = new THREE.SphereGeometry(0.18, 14, 14);
-  headGeo.scale(1.15, 1.0, 1.05);
+  // Head: cute rounded cranium
+  const headGeo = new THREE.SphereGeometry(0.22, 14, 14);
+  headGeo.scale(1.0, 1.05, 1.0);
   const head = new THREE.Mesh(headGeo, furMat);
-  head.position.set(0, 0.38, 0.18);
+  head.position.set(0, 0.44, 0.22);
   head.castShadow = true;
   root.add(head);
 
-  // Big Shiny Eyes with reflections
-  [-0.09, 0.09].forEach((xPos) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), eyeMat);
-    eye.position.set(xPos, 0.4, 0.32);
-    root.add(eye);
+  // Left & Right Floppy Ears
+  const earGeo = new THREE.CylinderGeometry(0.055, 0.035, 0.38, 8);
+  earGeo.scale(1.0, 1.0, 0.5);
 
-    const gleam = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    gleam.position.set(xPos + 0.01, 0.415, 0.345);
-    root.add(gleam);
+  const leftEar = new THREE.Mesh(earGeo, furMat);
+  leftEar.position.set(-0.11, 0.62, 0.16);
+  leftEar.rotation.set(-0.35, 0, -0.25);
+  root.add(leftEar);
+
+  const rightEar = new THREE.Mesh(earGeo, furMat);
+  rightEar.position.set(0.11, 0.62, 0.16);
+  rightEar.rotation.set(-0.35, 0, 0.25);
+  root.add(rightEar);
+
+  // Inner pink ear insets
+  const inEarGeo = new THREE.CylinderGeometry(0.035, 0.02, 0.32, 6);
+  inEarGeo.scale(1.0, 1.0, 0.4);
+  const inEarL = new THREE.Mesh(inEarGeo, innerEarMat);
+  inEarL.position.set(0, 0, 0.02);
+  leftEar.add(inEarL);
+
+  const inEarR = new THREE.Mesh(inEarGeo, innerEarMat);
+  inEarR.position.set(0, 0, 0.02);
+  rightEar.add(inEarR);
+
+  // Eyes
+  [-0.09, 0.09].forEach((ex) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), eyeMat);
+    eye.position.set(ex, 0.48, 0.38);
+    root.add(eye);
   });
 
-  // Pink Twitchy Nose
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.03, 6), noseMat);
-  nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, 0.36, 0.36);
+  // Nose
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), noseMat);
+  nose.position.set(0, 0.42, 0.44);
   root.add(nose);
 
-  // Expressive Floppy Ears with Inner Pink
-  const createEar = (isLeft: boolean) => {
-    const earGroup = new THREE.Group();
-    const side = isLeft ? -1 : 1;
-    earGroup.position.set(side * 0.08, 0.52, 0.12);
-
-    const earGeo = new THREE.ConeGeometry(0.065, 0.34, 10);
-    earGeo.scale(0.8, 1.0, 0.35);
-    const ear = new THREE.Mesh(earGeo, furMat);
-    ear.position.y = 0.14;
-    earGroup.add(ear);
-
-    const innerGeo = new THREE.ConeGeometry(0.045, 0.26, 8);
-    innerGeo.scale(0.7, 1.0, 0.2);
-    const inner = new THREE.Mesh(innerGeo, innerEarMat);
-    inner.position.set(0, 0.12, 0.015);
-    earGroup.add(inner);
-
-    earGroup.rotation.z = side * 0.25;
-    earGroup.rotation.x = -0.2;
-    root.add(earGroup);
-    return ear;
-  };
-
-  const leftEar = createEar(true);
-  const rightEar = createEar(false);
-
-  // Fluffy Tail
-  const tailGeo = new THREE.SphereGeometry(0.08, 8, 8);
-  const tail = new THREE.Mesh(tailGeo, furMat);
-  tail.position.set(0, 0.22, -0.28);
+  // Puffy Tail
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10), furMat);
+  tail.position.set(0, 0.32, -0.32);
   root.add(tail);
 
-  // Paws
-  [-0.09, 0.09].forEach((px) => {
+  // Front Paws
+  [-0.1, 0.1].forEach((px) => {
     const paw = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), furMat);
-    paw.scale.set(0.8, 0.5, 1.2);
-    paw.position.set(px, 0.04, 0.12);
+    paw.scale.set(0.8, 0.6, 1.2);
+    paw.position.set(px, 0.05, 0.22);
     root.add(paw);
   });
 
+  // Back Feet
+  [-0.16, 0.16].forEach((bx) => {
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), furMat);
+    foot.scale.set(0.85, 0.5, 1.4);
+    foot.position.set(bx, 0.05, -0.06);
+    root.add(foot);
+  });
+
   let hopPhase = 0;
+
   const updateAnimation = (isWalking: boolean, time: number) => {
     if (isWalking) {
-      hopPhase += 0.26;
-      // Joyful rhythmic hopping motion
+      hopPhase += 0.22;
       const hop = Math.abs(Math.sin(hopPhase)) * 0.18;
       root.position.y = hop;
-      root.rotation.x = Math.sin(hopPhase) * 0.18;
+      root.rotation.x = -Math.sin(hopPhase) * 0.18;
 
-      // Ear spring dynamic bounce
-      leftEar.rotation.z = -0.25 + Math.sin(hopPhase * 1.5) * 0.25;
-      rightEar.rotation.z = 0.25 - Math.sin(hopPhase * 1.5) * 0.25;
+      // Floppy ear bounce
+      leftEar.rotation.x = -0.35 + Math.sin(hopPhase) * 0.25;
+      rightEar.rotation.x = -0.35 + Math.sin(hopPhase) * 0.25;
     } else {
-      // Idle sniffing & ear twitching
-      root.position.y = 0;
+      // Idle twitching & breathing
+      const breath = Math.sin(time * 3.5) * 0.015;
+      root.position.y = breath;
       root.rotation.x = 0;
-      const noseTwitch = Math.sin(time * 6.0) * 0.005;
-      nose.position.y = 0.36 + noseTwitch;
-      leftEar.rotation.z = -0.25 + Math.sin(time * 3.0) * 0.08;
-      rightEar.rotation.z = 0.25 + Math.cos(time * 3.0) * 0.08;
+      leftEar.rotation.x = -0.35 + Math.sin(time * 4) * 0.08;
+      rightEar.rotation.x = -0.35 + Math.cos(time * 3.5) * 0.08;
     }
   };
 

@@ -180,64 +180,69 @@ export function createSanaHomeInterior(): InteriorSceneObjects {
   rugMesh.position.set(livingCx, 0.07, livingCz);
   group.add(rugMesh);
 
-  // Luxurious L-shaped Emerald Velvet Sectional Sofa
+  // Luxurious L-shaped Emerald Velvet Sectional Sofa (Calibrated ergonomically for realistic sitting)
   const sofaMat = new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 0.65 });
   const cushionMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.5 }); // Golden silk cushions
 
-  // Main 4-seater Section (Facing North towards TV)
-  const mainSofa = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.55, 1.2), sofaMat);
-  mainSofa.position.set(livingCx, 0.45, livingCz - 1.4);
+  // Main 4-seater Section (Seat Height: 0.44m, Depth: 0.95m, Facing North towards TV)
+  const sofaBaseHeight = 0.44;
+  const mainSofa = new THREE.Mesh(new THREE.BoxGeometry(4.4, sofaBaseHeight, 0.95), sofaMat);
+  mainSofa.position.set(livingCx, sofaBaseHeight / 2, livingCz - 1.35);
+  mainSofa.receiveShadow = true;
   group.add(mainSofa);
 
-  const mainSofaBack = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.85, 0.35), sofaMat);
-  mainSofaBack.position.set(livingCx, 0.95, livingCz - 1.85);
+  // Ergonomic Padded Backrest
+  const mainSofaBack = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.55, 0.28), sofaMat);
+  mainSofaBack.position.set(livingCx, sofaBaseHeight + 0.25, livingCz - 1.72);
+  mainSofaBack.castShadow = true;
   group.add(mainSofaBack);
 
   // Return Chaise Section (L-Shape on left)
-  const chaise = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.55, 2.4), sofaMat);
-  chaise.position.set(livingCx - 1.8, 0.45, livingCz - 0.2);
+  const chaise = new THREE.Mesh(new THREE.BoxGeometry(1.1, sofaBaseHeight, 2.0), sofaMat);
+  chaise.position.set(livingCx - 1.8, sofaBaseHeight / 2, livingCz - 0.35);
   group.add(chaise);
 
   // Golden accent cushions
   [-1.2, 0, 1.2].forEach((xOff) => {
-    const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.45, 0.2), cushionMat);
-    cushion.position.set(livingCx + xOff, 0.85, livingCz - 1.65);
+    const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.38, 0.16), cushionMat);
+    cushion.position.set(livingCx + xOff, sofaBaseHeight + 0.18, livingCz - 1.55);
+    cushion.rotation.x = 0.12;
     group.add(cushion);
   });
 
   furnitureColliders.push({
     id: "furn-sofa-main",
-    minX: livingCx - 2.6,
-    maxX: livingCx + 2.6,
-    minZ: livingCz - 2.2,
-    maxZ: livingCz - 0.7,
+    minX: livingCx - 2.3,
+    maxX: livingCx + 2.3,
+    minZ: livingCz - 1.9,
+    maxZ: livingCz - 0.85,
   });
   furnitureColliders.push({
     id: "furn-sofa-chaise",
-    minX: livingCx - 2.6,
-    maxX: livingCx - 1.0,
-    minZ: livingCz - 0.7,
-    maxZ: livingCz + 1.2,
+    minX: livingCx - 2.4,
+    maxX: livingCx - 1.2,
+    minZ: livingCz - 0.85,
+    maxZ: livingCz + 0.7,
   });
 
-  // Seat Anchor: Sofa Center (Watching TV)
+  // Seat Anchor: Sofa Center (Aalekh & Sana Watching TV side-by-side)
   seatAnchors.push({
     id: "seat-sofa-center",
-    label: "Sofa (Center)",
-    position: new THREE.Vector3(livingCx, 0, livingCz - 1.3),
+    label: "Sofa (Couple TV Watching)",
+    position: new THREE.Vector3(livingCx - 0.35, 0, livingCz - 1.15),
     rotationY: 0, // Facing North towards TV
-    sitHeight: 0.52,
-    cameraOffset: new THREE.Vector3(0, 1.8, -4.2),
-    cameraLookAt: new THREE.Vector3(livingCx, 1.6, bounds.minZ + 0.2),
+    sitHeight: 0.46,
+    cameraOffset: new THREE.Vector3(0, 1.6, -3.8),
+    cameraLookAt: new THREE.Vector3(livingCx, 1.5, bounds.minZ + 0.2),
   });
 
   // Seat Anchor: Sofa Chaise (Relaxed view)
   seatAnchors.push({
     id: "seat-sofa-chaise",
     label: "Sofa (Chaise Lounge)",
-    position: new THREE.Vector3(livingCx - 1.8, 0, livingCz - 0.2),
+    position: new THREE.Vector3(livingCx - 1.8, 0, livingCz - 0.35),
     rotationY: Math.PI / 2, // Facing East toward living room
-    sitHeight: 0.52,
+    sitHeight: 0.46,
     cameraOffset: new THREE.Vector3(-3.2, 1.8, 0),
     cameraLookAt: new THREE.Vector3(livingCx + 1.0, 1.4, livingCz),
   });
