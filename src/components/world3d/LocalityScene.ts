@@ -222,14 +222,6 @@ export class LocalitySceneEngine {
     shaft.position.y = 9;
     this.waypointBeaconGroup.add(shaft);
 
-    // Hovering Waypoint Pin Indicator (pointing down towards target)
-    const pinGeo = new THREE.ConeGeometry(0.2, 0.5, 16);
-    const pinMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
-    const pin = new THREE.Mesh(pinGeo, pinMat);
-    pin.rotation.x = Math.PI; // point down towards ground
-    pin.position.y = 2.8;
-    this.waypointBeaconGroup.add(pin);
-
     // Ground Pulsing Ring
     const ringGeo = new THREE.RingGeometry(1.2, 1.5, 24);
     const ringMat = new THREE.MeshBasicMaterial({
@@ -940,12 +932,12 @@ export class LocalitySceneEngine {
       gate.update(delta, this.charPos);
     });
 
-    // Animate Waypoint Beacon
+    // Animate Waypoint Beacon ground pulse
     if (this.waypointBeaconGroup && this.waypointBeaconGroup.visible) {
-      const diamond = this.waypointBeaconGroup.children[1];
-      if (diamond) {
-        diamond.rotation.y = time * 2;
-        diamond.position.y = 3.5 + Math.sin(time * 3) * 0.35;
+      const ring = this.waypointBeaconGroup.children[1];
+      if (ring) {
+        const s = 1.0 + Math.sin(time * 3) * 0.15;
+        ring.scale.set(s, s, s);
       }
     }
 

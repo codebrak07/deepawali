@@ -204,13 +204,6 @@ export function createInteractiveStations(scene: THREE.Scene): Station3DObjects 
     ring.position.y = 0.04;
     marker.add(ring);
 
-    // Elegant Floating Golden Diya Beacon (delicate proportion, not oversized blocks)
-    const beaconGeo = new THREE.ConeGeometry(0.12, 0.28, 8);
-    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
-    const beacon = new THREE.Mesh(beaconGeo, beaconMat);
-    beacon.position.y = 1.6;
-    marker.add(beacon);
-
     group.add(marker);
     stationMarkers.push({
       id: st.id,
@@ -246,15 +239,6 @@ export function createInteractiveStations(scene: THREE.Scene): Station3DObjects 
       stationC_LanternMesh.position.y = 1.2 + Math.sin(time * 2) * 0.12;
       stationC_LanternMesh.rotation.y = time * 0.4;
     }
-
-    // 4. Animate floating station beacon markers
-    stationMarkers.forEach((sm, i) => {
-      const beacon = sm.marker.children[1];
-      if (beacon) {
-        beacon.position.y = 2.4 + Math.sin(time * 3 + i) * 0.25;
-        beacon.rotation.y = time * 1.5;
-      }
-    });
   };
 
   return {
