@@ -15,6 +15,7 @@ import { createShivaTempleSystem, TempleSceneObjects } from "./ShivaTemple3D";
 import { createHanumanTempleSystem, HanumanTempleSceneObjects } from "./HanumanTemple3D";
 import { createMountainFireworksDestination, MountainDestination } from "./MountainFireworks3D";
 import { InteractiveHaveliGate } from "./HaveliGateSystem";
+import { GraphicsQualitySystem, GraphicsQualityPreset } from "./GraphicsQualitySystem";
 
 export type CameraViewMode = "exploration" | "story";
 
@@ -35,6 +36,7 @@ export class LocalitySceneEngine {
   public hanumanSuite: HanumanTempleSceneObjects;
   public mountainSuite: MountainDestination;
   public collisionSystem: LocalityCollisionSystem;
+  public qualitySystem: GraphicsQualitySystem;
 
   // Character Physics & State
   public charPos = new THREE.Vector3(0, 0, 4); // Start near Station A & Chowk
@@ -131,6 +133,9 @@ export class LocalitySceneEngine {
     moonDirLight.shadow.camera.bottom = -d;
     this.scene.add(moonDirLight);
 
+    // 2B. Adaptive Graphics Quality System (Auto DPR, profiling, and quality tiers)
+    this.qualitySystem = new GraphicsQualitySystem(this.renderer, this.camera, moonDirLight);
+
     // 3. Locality Environments & Collision Engine
     this.collisionSystem = new LocalityCollisionSystem();
     const roadNetwork = createLocalityRoadNetwork(this.scene);
@@ -203,6 +208,9 @@ export class LocalitySceneEngine {
 
     // 8. Event Listeners
     window.addEventListener("resize", this.handleResize);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    }
     this.setupInputListeners();
   }
 
@@ -898,9 +906,22 @@ export class LocalitySceneEngine {
     }
   }
 
+  private handleVisibilityChange = () => {
+    if (typeof document !== "undefined") {
+      if (document.hidden) {
+        this.clock.stop();
+      } else {
+        this.clock.start();
+      }
+    }
+  };
+
   public dispose() {
     this.stop();
     window.removeEventListener("resize", this.handleResize);
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    }
     this.mountainSuite.dispose();
     if (this.renderer.domElement.parentNode) {
       this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
@@ -908,11 +929,37 @@ export class LocalitySceneEngine {
     this.renderer.dispose();
   }
 
+  private storyDeltaAcc = 0;
+
   private loop = () => {
     if (!this.isRunning) return;
+    if (typeof document !== "undefined" && document.hidden) {
+      this.animationId = requestAnimationFrame(this.loop);
+      return;
+    }
+
     const delta = Math.min(this.clock.getDelta(), 0.1);
     const time = this.clock.getElapsedTime();
 
+    // OPTIMIZATION: When reading Storybook, throttle to 30 FPS and bypass heavy game loops
+    if (this.cameraMode === "story") {
+      this.storyDeltaAcc += delta;
+      if (this.storyDeltaAcc < 0.033) {
+        this.animationId = requestAnimationFrame(this.loop);
+        return;
+      }
+      this.storyDeltaAcc = 0;
+
+      // Gentle panoramic camera sweep & atmospheric lighting only
+      this.updateCameraSystem(delta, time);
+      this.updateDecorations(time);
+      this.renderer.render(this.scene, this.camera);
+      this.animationId = requestAnimationFrame(this.loop);
+      return;
+    }
+
+    // Active Exploration: Adaptive Quality Profiling + Full 60 FPS Systems
+    this.qualitySystem.update(delta);
     this.updateCharacterPhysics(delta, time);
     this.updateCameraSystem(delta, time);
     this.checkStationProximity();
@@ -947,6 +994,18 @@ export class LocalitySceneEngine {
     this.renderer.render(this.scene, this.camera);
     this.animationId = requestAnimationFrame(this.loop);
   };
+
+  public setQualityPreset(preset: GraphicsQualityPreset) {
+    this.qualitySystem.setPreset(preset);
+  }
+
+  public getQualityPreset(): GraphicsQualityPreset {
+    return this.qualitySystem.getPreset();
+  }
+
+  public getActiveQualityTier(): "low" | "medium" | "high" {
+    return this.qualitySystem.getActiveTier();
+  }
 
   private updateCharacterPhysics(delta: number, time: number) {
     if (this.isSitting) {

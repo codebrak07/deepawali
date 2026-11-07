@@ -443,14 +443,21 @@ export default function Page() {
 
   return (
     <div
-      className={`relative w-screen min-h-screen bg-[#07091a] text-slate-100 ${
-        isExploreMode ? "overflow-hidden h-screen" : "overflow-x-hidden overflow-y-auto"
-      }`}
+      className={`relative w-full ${
+        isExploreMode
+          ? "h-screen max-h-screen overflow-hidden"
+          : "min-h-screen overflow-x-hidden overflow-y-auto"
+      } bg-[#07091a] text-slate-100`}
+      style={isExploreMode ? {} : { WebkitOverflowScrolling: "touch" }}
     >
       {/* 3D WebGL Canvas Container (Fixed Full-Viewport Backdrop) */}
       <div
         ref={containerRef}
-        className="fixed inset-0 w-full h-full cursor-grab active:cursor-grabbing z-0"
+        className={`fixed inset-0 w-full h-full z-0 ${
+          isExploreMode
+            ? "cursor-grab active:cursor-grabbing pointer-events-auto"
+            : "pointer-events-none"
+        }`}
         style={{ width: "100vw", height: "100vh", position: "fixed", top: 0, left: 0 }}
       />
 

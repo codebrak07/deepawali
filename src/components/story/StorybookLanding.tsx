@@ -63,7 +63,7 @@ export function StorybookLanding({ onEnterExploreMode, onOpenSurprise }: Storybo
       {/* ======================================================== */}
       {/* SECTION 1: HERO VIEWPORT SPACER */}
       {/* ======================================================== */}
-      <section className="h-screen w-full flex flex-col items-center justify-end pb-16 px-4 text-center pointer-events-none">
+      <section className="min-h-screen w-full flex flex-col items-center justify-end pb-16 px-4 text-center pointer-events-auto">
         <div className="pointer-events-auto max-w-xl mx-auto flex flex-col items-center animate-fadeIn">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1b0a2c]/85 border border-amber-400/40 text-amber-200 text-xs font-semibold mb-3 shadow-xl">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
