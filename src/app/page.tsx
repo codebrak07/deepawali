@@ -33,7 +33,6 @@ export default function Page() {
   const [isSitting, setIsSitting] = useState<boolean>(false);
   const [isWatchingTV, setIsWatchingTV] = useState<boolean>(false);
   const [tvChannelName, setTvChannelName] = useState<string>("Diwali Live");
-  const [isHoldingHands, setIsHoldingHands] = useState<boolean>(true);
 
   // Initialize 3D Engine on mount
   useEffect(() => {
@@ -46,16 +45,47 @@ export default function Page() {
       setNearbyStation(stationId);
     };
 
+    let lastTransformTime = 0;
+    let prevInsideBuilding = false;
+    let prevInsideTemple = false;
+    let prevInsideHanuman = false;
+    let prevSitting = false;
+    let prevWatchingTV = false;
+    let prevChannelName = "";
+
     engine.onPlayerTransformChange = (pos, heading) => {
-      setPlayerPos(pos);
-      setPlayerHeading(heading);
-      setIsInsideBuilding(engine.isInsideBuilding);
-      setIsInsideTemple(engine.isInsideTemple);
-      setIsInsideHanuman(engine.isInsideHanuman);
-      setIsSitting(engine.isSitting);
-      setIsWatchingTV(engine.isWatchingTV);
-      setIsHoldingHands(engine.isHoldingHands);
-      setTvChannelName(engine.interiorSuite.getTVChannelName());
+      const now = performance.now();
+      if (now - lastTransformTime > 33) {
+        lastTransformTime = now;
+        setPlayerPos(pos);
+        setPlayerHeading(heading);
+      }
+
+      if (prevInsideBuilding !== engine.isInsideBuilding) {
+        prevInsideBuilding = engine.isInsideBuilding;
+        setIsInsideBuilding(engine.isInsideBuilding);
+      }
+      if (prevInsideTemple !== engine.isInsideTemple) {
+        prevInsideTemple = engine.isInsideTemple;
+        setIsInsideTemple(engine.isInsideTemple);
+      }
+      if (prevInsideHanuman !== engine.isInsideHanuman) {
+        prevInsideHanuman = engine.isInsideHanuman;
+        setIsInsideHanuman(engine.isInsideHanuman);
+      }
+      if (prevSitting !== engine.isSitting) {
+        prevSitting = engine.isSitting;
+        setIsSitting(engine.isSitting);
+      }
+      if (prevWatchingTV !== engine.isWatchingTV) {
+        prevWatchingTV = engine.isWatchingTV;
+        setIsWatchingTV(engine.isWatchingTV);
+      }
+      const chName = engine.interiorSuite.getTVChannelName();
+      if (prevChannelName !== chName) {
+        prevChannelName = chName;
+        setTvChannelName(chName);
+      }
     };
 
     engine.onWaypointChange = (wp) => {
@@ -142,6 +172,11 @@ export default function Page() {
           soundManager.playDiyaChime();
         } else if (engine.nearbyStation === "station-home-lamps") {
           engine.toggleHomeLamps();
+        } else if (engine.nearbyStation === "station-mountain-bench") {
+          engine.sitDown("seat-mountain-fireworks-bench");
+        } else if (engine.nearbyStation.startsWith("station-gate-")) {
+          engine.toggleGate(engine.nearbyStation);
+          soundManager.playGateOpen();
         } else if (engine.nearbyStation === "station-surprise") {
           setShowFinalSurprise(true);
         } else {
@@ -234,6 +269,11 @@ export default function Page() {
   };
 
   const handleInteractStation = (stId: string) => {
+    if (stId.startsWith("station-gate-")) {
+      engineRef.current?.toggleGate(stId);
+      soundManager.playGateOpen();
+      return;
+    }
     if (stId === "station-enter-home") {
       engineRef.current?.enterBuilding();
       setIsInsideBuilding(true);
@@ -332,6 +372,20 @@ export default function Page() {
       engineRef.current?.toggleHomeLamps();
       return;
     }
+    if (stId === "station-mountain-bench") {
+      if (isSitting) {
+        engineRef.current?.triggerMountainFireworks();
+        soundManager.playFireworkBurst();
+      } else {
+        engineRef.current?.sitDown("seat-mountain-fireworks-bench");
+      }
+      return;
+    }
+    if (stId === "station-launch-fireworks") {
+      engineRef.current?.triggerMountainFireworks();
+      soundManager.playFireworkBurst();
+      return;
+    }
     if (stId === "station-surprise") {
       setShowFinalSurprise(true);
     } else {
@@ -359,7 +413,7 @@ export default function Page() {
   const handleLanternRelease = () => {
     if (engineRef.current) {
       engineRef.current.lanternRising = true;
-      handleCameraModeChange("lanternsky");
+      engineRef.current.adjustCameraOrbit(0, -0.22);
     }
   };
 
@@ -421,12 +475,9 @@ export default function Page() {
           onStopWatchingTV={() => engineRef.current?.stopWatchingTV()}
           onNextTVChannel={() => engineRef.current?.nextTVChannel()}
           onToggleLamps={() => engineRef.current?.toggleHomeLamps()}
-          isHoldingHands={isHoldingHands}
-          onToggleHoldingHands={() => {
-            if (engineRef.current) {
-              const val = engineRef.current.toggleHoldingHands();
-              setIsHoldingHands(val);
-            }
+          onTriggerFireworks={() => {
+            engineRef.current?.triggerMountainFireworks();
+            soundManager.playFireworkBurst();
           }}
         />
       )}

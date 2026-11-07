@@ -142,7 +142,8 @@ export class LocalityCollisionSystem {
     posX: number,
     posZ: number,
     dx: number,
-    dz: number
+    dz: number,
+    posY = 0
   ): { x: number; z: number; hitWall: boolean } {
     const isInterior = this.isInsideBuilding || this.isInsideTemple || this.isInsideHanuman;
     const colliders = isInterior ? this.interiorColliders : this.exteriorColliders;
@@ -162,7 +163,7 @@ export class LocalityCollisionSystem {
       const targetX = currentX + stepDx;
       const targetZ = currentZ + stepDz;
 
-      const collidesBoth = this.checkPointCollision(targetX, targetZ, colliders, r);
+      const collidesBoth = this.checkPointCollision(targetX, targetZ, colliders, r, posY);
 
       if (!collidesBoth) {
         currentX = targetX;
@@ -171,9 +172,9 @@ export class LocalityCollisionSystem {
         anyHitWall = true;
 
         // Smooth wall sliding: try sliding along X axis
-        const safeX = !this.checkPointCollision(currentX + stepDx, currentZ, colliders, r);
+        const safeX = !this.checkPointCollision(currentX + stepDx, currentZ, colliders, r, posY);
         // Try sliding along Z axis
-        const safeZ = !this.checkPointCollision(currentX, currentZ + stepDz, colliders, r);
+        const safeZ = !this.checkPointCollision(currentX, currentZ + stepDz, colliders, r, posY);
 
         if (safeX && !safeZ) {
           currentX += stepDx;
@@ -190,6 +191,32 @@ export class LocalityCollisionSystem {
       }
     }
 
+    // Penetration Resolution: If current point overlaps any collider, softly project out
+    for (let i = 0; i < colliders.length; i++) {
+      const c = colliders[i];
+      if (posY !== undefined) {
+        if (c.minY !== undefined && posY < c.minY) continue;
+        if (c.maxY !== undefined && posY > c.maxY) continue;
+      }
+      if (
+        currentX > c.minX - r &&
+        currentX < c.maxX + r &&
+        currentZ > c.minZ - r &&
+        currentZ < c.maxZ + r
+      ) {
+        anyHitWall = true;
+        const dMinX = Math.abs(currentX - (c.minX - r));
+        const dMaxX = Math.abs(currentX - (c.maxX + r));
+        const dMinZ = Math.abs(currentZ - (c.minZ - r));
+        const dMaxZ = Math.abs(currentZ - (c.maxZ + r));
+        const minD = Math.min(dMinX, dMaxX, dMinZ, dMaxZ);
+        if (minD === dMinX) currentX = c.minX - r;
+        else if (minD === dMaxX) currentX = c.maxX + r;
+        else if (minD === dMinZ) currentZ = c.minZ - r;
+        else currentZ = c.maxZ + r;
+      }
+    }
+
     return { x: currentX, z: currentZ, hitWall: anyHitWall };
   }
 
@@ -200,10 +227,15 @@ export class LocalityCollisionSystem {
     x: number,
     z: number,
     colliders: BoxCollider[],
-    radius: number
+    radius: number,
+    posY?: number
   ): boolean {
     for (let i = 0; i < colliders.length; i++) {
       const c = colliders[i];
+      if (posY !== undefined) {
+        if (c.minY !== undefined && posY < c.minY) continue;
+        if (c.maxY !== undefined && posY > c.maxY) continue;
+      }
       if (
         x >= c.minX - radius &&
         x <= c.maxX + radius &&

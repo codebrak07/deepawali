@@ -5,9 +5,7 @@ import { createDiwaliDecorations } from "./DiwaliDecorations3D";
 import {
   createAalekhCharacter,
   createShirjanaCharacter,
-  createBunnyCompanion,
   CharacterRig,
-  BunnyRig,
 } from "./Characters3D";
 import { createInteractiveStations, Station3DObjects } from "./InteractiveStations3D";
 import { INTERACTIVE_STATIONS } from "./LocalityData";
@@ -15,8 +13,10 @@ import { LocalityCollisionSystem, BoxCollider } from "./LocalityCollisionSystem"
 import { createSanaHomeInterior, InteriorSceneObjects, SeatAnchor } from "./BuildingInteriors3D";
 import { createShivaTempleSystem, TempleSceneObjects } from "./ShivaTemple3D";
 import { createHanumanTempleSystem, HanumanTempleSceneObjects } from "./HanumanTemple3D";
+import { createMountainFireworksDestination, MountainDestination } from "./MountainFireworks3D";
+import { InteractiveHaveliGate } from "./HaveliGateSystem";
 
-export type CameraViewMode = "exploration" | "closeup" | "street" | "birdeye" | "lanternsky" | "story";
+export type CameraViewMode = "exploration" | "story";
 
 export class LocalitySceneEngine {
   public scene: THREE.Scene;
@@ -27,17 +27,18 @@ export class LocalitySceneEngine {
   // Rigs, Interiors, & Temple Systems
   public aalekh: CharacterRig;
   public shirjana: CharacterRig;
-  public bunny: BunnyRig;
+  public interactiveGates: InteractiveHaveliGate[] = [];
   private stations: Station3DObjects;
   private updateDecorations: (time: number) => void;
   public interiorSuite: InteriorSceneObjects;
   public templeSuite: TempleSceneObjects;
   public hanumanSuite: HanumanTempleSceneObjects;
+  public mountainSuite: MountainDestination;
   public collisionSystem: LocalityCollisionSystem;
 
   // Character Physics & State
   public charPos = new THREE.Vector3(0, 0, 4); // Start near Station A & Chowk
-  public charRotation = 0;
+  public charRotation = Math.PI; // Facing North down the street towards the temples, away from default camera
   public moveVector = new THREE.Vector2(0, 0); // Left Joystick movement
   public lookVector = new THREE.Vector2(0, 0); // Right Joystick look
   public isWalking = false;
@@ -47,7 +48,7 @@ export class LocalitySceneEngine {
   public isSitting = false;
   public activeSeatAnchor: SeatAnchor | null = null;
   public isWatchingTV = false;
-  public isHoldingHands = true;
+  public isHoldingHands = false;
 
   // Camera Orbit Rig & State (GTA-Style calibrated defaults)
   public cameraMode: CameraViewMode = "story";
@@ -135,7 +136,8 @@ export class LocalitySceneEngine {
     if (this.vehicleColliders.length > 0) {
       this.collisionSystem.exteriorColliders.push(...this.vehicleColliders);
     }
-    createLocalityBuildings(this.scene);
+    const bldgResult = createLocalityBuildings(this.scene);
+    this.interactiveGates.push(...bldgResult.interactiveGates);
 
     const deco = createDiwaliDecorations(this.scene);
     this.updateDecorations = deco.updateDecorations;
@@ -144,6 +146,9 @@ export class LocalitySceneEngine {
     // 4. Build Sana's Expansive Home Interior (18m × 15m)
     this.interiorSuite = createSanaHomeInterior();
     this.scene.add(this.interiorSuite.group);
+    if (this.interiorSuite.villaGate) {
+      this.interactiveGates.push(this.interiorSuite.villaGate);
+    }
     this.interiorSuite.occlusionMeshes.forEach((mesh) =>
       this.collisionSystem.registerOcclusionMesh(mesh)
     );
@@ -164,33 +169,35 @@ export class LocalitySceneEngine {
       this.collisionSystem.registerOcclusionMesh(mesh)
     );
 
+    // 6B. Dedicated Scenic Mountain Fireworks Destination (Summit Romantic Viewpoint)
+    this.mountainSuite = createMountainFireworksDestination();
+    this.scene.add(this.mountainSuite.group);
+
     // Set initial exterior colliders (merging custom suites entrance colliders, excluding generic boxes)
     this.collisionSystem.buildExteriorColliders([
+      ...this.interiorSuite.exteriorColliders,
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
       ...this.vehicleColliders,
+      ...this.mountainSuite.colliders,
     ]);
 
     // 7. Interactive Waypoint 3D Beacon
     this.setupWaypointBeacon();
 
-    // 8. Sculpted 3D Characters (Aalekh, Shirjana, Bunny Companion)
+    // 8. Sculpted 3D Couple Characters (Aalekh & Shirjana / Sana)
     this.aalekh = createAalekhCharacter();
     this.shirjana = createShirjanaCharacter();
-    this.bunny = createBunnyCompanion();
 
     this.aalekh.root.position.copy(this.charPos);
     this.scene.add(this.aalekh.root);
 
-    this.shirjana.root.position.set(this.charPos.x + 0.52, 0, this.charPos.z);
+    this.shirjana.root.position.set(this.charPos.x + 0.78, 0, this.charPos.z);
     this.scene.add(this.shirjana.root);
 
-    this.bunny.root.position.set(this.charPos.x - 0.75, 0, this.charPos.z - 0.6);
-    this.scene.add(this.bunny.root);
-
-    // Initial lovey-dovey hand holding setup
-    this.aalekh.setHoldingHands(true);
-    this.shirjana.setHoldingHands(true);
+    // Both characters stand independently with natural relaxed arm poses
+    this.aalekh.setHoldingHands(false);
+    this.shirjana.setHoldingHands(false);
 
     // 8. Event Listeners
     window.addEventListener("resize", this.handleResize);
@@ -336,19 +343,18 @@ export class LocalitySceneEngine {
 
   public setCameraMode(mode: CameraViewMode) {
     this.cameraMode = mode;
-    if (mode === "closeup") {
-      this.orbitDistance = 3.2;
-      this.orbitPitch = 0.16;
-    } else if (mode === "street") {
-      this.orbitDistance = 5.5;
-      this.orbitPitch = 0.14;
-    } else if (mode === "birdeye") {
-      this.orbitDistance = 36.0;
-      this.orbitPitch = 1.15;
-    } else if (mode === "exploration") {
-      this.orbitDistance = this.isInsideBuilding ? 3.8 : this.isInsideTemple ? 4.5 : 6.0;
-      this.orbitPitch = 0.28;
+    if (mode === "exploration") {
+      this.orbitDistance = this.isInsideBuilding ? 4.2 : this.isInsideTemple ? 4.5 : 7.2;
+      this.orbitPitch = 0.26;
     }
+  }
+
+  public triggerFirework() {
+    this.mountainSuite.triggerFirework();
+  }
+
+  public triggerMountainFireworks() {
+    this.mountainSuite.triggerFirework();
   }
 
   public setInputVector(x: number, y: number) {
@@ -364,7 +370,8 @@ export class LocalitySceneEngine {
 
   public adjustCameraOrbit(deltaYaw: number, deltaPitch: number) {
     this.orbitYaw = (this.orbitYaw + deltaYaw) % (Math.PI * 2);
-    this.orbitPitch = Math.max(0.08, Math.min(1.15, this.orbitPitch + deltaPitch));
+    // Allow looking upward (-0.45) directly into the fireworks sky
+    this.orbitPitch = Math.max(-0.45, Math.min(1.20, this.orbitPitch + deltaPitch));
   }
 
   public adjustZoom(delta: number) {
@@ -384,8 +391,83 @@ export class LocalitySceneEngine {
     this.invertPitch = invert;
   }
 
+  public teleportTo(x: number, z: number, rotationY = Math.PI) {
+    if (this.isSitting) {
+      this.standUp();
+    }
+    this.aalekh.setPraying(false);
+    this.shirjana.setPraying(false);
+
+    // Target checks
+    // If target is Sana Home (-20, -1.5) or in home bounds
+    const isTargetSanaHome =
+      Math.hypot(x - (-20), z - (-1.5)) < 3.5 ||
+      (x >= this.interiorSuite.bounds.minX + 0.5 &&
+        x <= this.interiorSuite.bounds.maxX - 0.5 &&
+        z >= this.interiorSuite.bounds.minZ + 0.5 &&
+        z <= this.interiorSuite.bounds.maxZ - 0.5);
+
+    const isTargetShiva =
+      Math.hypot(x - 14, z - (-21)) < 4.0 ||
+      (x >= this.templeSuite.interiorBounds.minX &&
+        x <= this.templeSuite.interiorBounds.maxX &&
+        z >= this.templeSuite.interiorBounds.minZ &&
+        z <= this.templeSuite.interiorBounds.maxZ);
+
+    const isTargetHanuman =
+      Math.hypot(x - (-12), z - (-21)) < 4.0 ||
+      (x >= this.hanumanSuite.interiorBounds.minX &&
+        x <= this.hanumanSuite.interiorBounds.maxX &&
+        z >= this.hanumanSuite.interiorBounds.minZ &&
+        z <= this.hanumanSuite.interiorBounds.maxZ);
+
+    if (isTargetSanaHome) {
+      this.enterBuilding();
+      return;
+    } else if (isTargetShiva) {
+      this.enterTemple();
+      return;
+    } else if (isTargetHanuman) {
+      this.enterHanuman();
+      return;
+    }
+
+    // Outdoors teleport
+    if (this.isInsideBuilding || this.isInsideTemple || this.isInsideHanuman) {
+      this.exitBuilding();
+    }
+
+    let targetY = 0;
+    if (this.mountainSuite) {
+      targetY = this.mountainSuite.getTrailElevation(x, z) ?? 0;
+    }
+
+    const safePos = this.collisionSystem.findSafeSpawnPosition(x, z, false);
+    this.charPos.set(safePos.x, targetY, safePos.z);
+    this.charRotation = rotationY;
+
+    const spacing = 0.78;
+    const perpX = Math.cos(this.charRotation);
+    const perpZ = -Math.sin(this.charRotation);
+
+    this.aalekh.root.position.copy(this.charPos);
+    this.shirjana.root.position.set(
+      this.charPos.x + perpX * spacing,
+      targetY,
+      this.charPos.z + perpZ * spacing
+    );
+    this.aalekh.root.rotation.y = this.charRotation;
+    this.shirjana.root.rotation.y = this.charRotation;
+
+    this.resetCamera();
+    this.snapCameraToTarget(6.5, 0.25, 0);
+
+    this.clearWaypoint();
+    this.onProximityChange?.(null);
+  }
+
   public navigateTo(x: number, z: number) {
-    this.setWaypoint(x, z);
+    this.teleportTo(x, z);
   }
 
   // ==========================================
@@ -394,29 +476,30 @@ export class LocalitySceneEngine {
   public enterBuilding() {
     this.isInsideBuilding = true;
     this.isInsideTemple = false;
+    this.isInsideHanuman = false;
     this.collisionSystem.isInsideBuilding = true;
     this.collisionSystem.isInsideTemple = false;
+    this.collisionSystem.isInsideHanuman = false;
     this.collisionSystem.setInteriorColliders(
       this.interiorSuite.bounds,
       this.interiorSuite.furnitureColliders,
-      2.6
+      3.2
     );
 
-    // Place character inside facing north into living room
-    this.charPos.set(-20, 0, -8.5);
+    // Place character inside facing north into the 2-storey grand villa
+    this.charPos.set(-20, 0, -6.5);
     this.charRotation = Math.PI;
 
     this.aalekh.root.position.copy(this.charPos);
-    this.shirjana.root.position.set(-18.8, 0, -8.3);
-    this.bunny.root.position.set(-21.1, 0, -8.1);
+    this.shirjana.root.position.set(-19.22, 0, -6.5);
 
-    this.orbitYaw = 0; // Camera behind player facing into room
-    this.orbitDistance = 3.8;
+    this.orbitYaw = 0; // Camera behind player looking north into the living room
+    this.orbitDistance = 4.8;
     this.orbitPitch = 0.22;
     this.manualLookTimer = 0;
 
     // Immediately snap camera
-    this.snapCameraToTarget(3.8, 0.22, 0);
+    this.snapCameraToTarget(4.8, 0.22, 0);
 
     this.nearbyStation = null;
     this.onProximityChange?.(null);
@@ -430,27 +513,27 @@ export class LocalitySceneEngine {
     this.collisionSystem.isInsideTemple = false;
     this.collisionSystem.isInsideHanuman = false;
     this.collisionSystem.buildExteriorColliders([
+      ...this.interiorSuite.exteriorColliders,
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
       ...this.vehicleColliders,
     ]);
 
-    // Place character out in the open street in front of Sana Residence
-    const safePos = this.collisionSystem.findSafeSpawnPosition(-20, 2.5, false);
+    // Place character out in the open street in front of Sana Residence facing north towards temples
+    const safePos = this.collisionSystem.findSafeSpawnPosition(-20, -1.5, false);
     this.charPos.set(safePos.x, 0, safePos.z);
-    this.charRotation = 0;
+    this.charRotation = Math.PI;
 
     this.aalekh.root.position.set(safePos.x, 0, safePos.z);
-    this.shirjana.root.position.set(safePos.x + 0.52, 0, safePos.z);
-    this.bunny.root.position.set(safePos.x - 0.75, 0, safePos.z - 0.5);
+    this.shirjana.root.position.set(safePos.x + 0.78, 0, safePos.z);
 
-    this.orbitYaw = Math.PI; // Camera behind player looking along the street
+    this.orbitYaw = 0; // Camera behind player looking north down the street
     this.orbitDistance = 8.5;
     this.orbitPitch = 0.30;
     this.manualLookTimer = 0;
 
     // Immediately snap camera to street view so there is zero lerping through walls
-    this.snapCameraToTarget(8.5, 0.30, Math.PI);
+    this.snapCameraToTarget(8.5, 0.30, 0);
 
     this.nearbyStation = null;
     this.onProximityChange?.(null);
@@ -467,13 +550,12 @@ export class LocalitySceneEngine {
       3.6
     );
 
-    // Place player inside sanctum facing north towards Shivling
-    this.charPos.set(14, 0, -24.5);
+    // Place player inside sanctum on elevated plinth (y = 0.40m) facing north towards Shivling
+    this.charPos.set(14, 0.40, -24.5);
     this.charRotation = Math.PI;
 
-    this.aalekh.root.position.set(14, 0, -24.5);
-    this.shirjana.root.position.set(15.2, 0, -24.3);
-    this.bunny.root.position.set(12.9, 0, -24.1);
+    this.aalekh.root.position.set(14, 0.40, -24.5);
+    this.shirjana.root.position.set(14.78, 0.40, -24.5);
 
     this.orbitYaw = 0;
     this.orbitDistance = 4.5;
@@ -494,6 +576,7 @@ export class LocalitySceneEngine {
     this.collisionSystem.isInsideTemple = false;
     this.collisionSystem.isInsideHanuman = false;
     this.collisionSystem.buildExteriorColliders([
+      ...this.interiorSuite.exteriorColliders,
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
       ...this.vehicleColliders,
@@ -505,8 +588,7 @@ export class LocalitySceneEngine {
     this.charRotation = 0;
 
     this.aalekh.root.position.set(safePos.x, 0, safePos.z);
-    this.shirjana.root.position.set(safePos.x + 0.52, 0, safePos.z);
-    this.bunny.root.position.set(safePos.x - 0.75, 0, safePos.z - 0.5);
+    this.shirjana.root.position.set(safePos.x + 0.78, 0, safePos.z);
 
     this.orbitYaw = Math.PI;
     this.orbitDistance = 8.5;
@@ -532,13 +614,12 @@ export class LocalitySceneEngine {
       3.2
     );
 
-    // Place player inside Hanuman Mandir sanctum facing north towards idol
-    this.charPos.set(-12, 0, -25.5);
+    // Place player inside Hanuman Mandir sanctum on elevated plinth (y = 0.40m) facing north towards idol
+    this.charPos.set(-12, 0.40, -25.5);
     this.charRotation = Math.PI;
 
-    this.aalekh.root.position.set(-12, 0, -25.5);
-    this.shirjana.root.position.set(-10.8, 0, -25.3);
-    this.bunny.root.position.set(-13.1, 0, -25.1);
+    this.aalekh.root.position.set(-12, 0.40, -25.5);
+    this.shirjana.root.position.set(-11.22, 0.40, -25.5);
 
     this.orbitYaw = 0;
     this.orbitDistance = 4.2;
@@ -559,6 +640,7 @@ export class LocalitySceneEngine {
     this.collisionSystem.isInsideTemple = false;
     this.collisionSystem.isInsideHanuman = false;
     this.collisionSystem.buildExteriorColliders([
+      ...this.interiorSuite.exteriorColliders,
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
       ...this.vehicleColliders,
@@ -570,8 +652,7 @@ export class LocalitySceneEngine {
     this.charRotation = 0;
 
     this.aalekh.root.position.set(safePos.x, 0, safePos.z);
-    this.shirjana.root.position.set(safePos.x + 0.52, 0, safePos.z);
-    this.bunny.root.position.set(safePos.x - 0.75, 0, safePos.z - 0.5);
+    this.shirjana.root.position.set(safePos.x + 0.78, 0, safePos.z);
 
     this.orbitYaw = Math.PI;
     this.orbitDistance = 8.5;
@@ -587,39 +668,80 @@ export class LocalitySceneEngine {
   // Lifestyle & Seating Systems
   public sitDown(anchorId?: string) {
     const anchor =
-      this.interiorSuite.seatAnchors.find((a) => a.id === anchorId) ||
-      this.interiorSuite.seatAnchors[0];
+      anchorId === "seat-mountain-fireworks-bench"
+        ? this.mountainSuite.benchAnchor
+        : this.interiorSuite.seatAnchors.find((a) => a.id === anchorId) ||
+          this.interiorSuite.seatAnchors[0];
     if (!anchor) return;
 
     this.isSitting = true;
     this.activeSeatAnchor = anchor;
-    this.charPos.copy(anchor.position);
-    this.charRotation = anchor.rotationY;
 
-    this.aalekh.root.position.copy(this.charPos);
-    this.aalekh.root.rotation.y = this.charRotation;
-    this.aalekh.setSitting(true);
+    if (anchor.id === "seat-mountain-fireworks-bench") {
+      const rightVec = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
+      const fwdVec = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
 
-    // Place Sana gracefully seated alongside
-    if (anchor.id === "seat-sofa-center") {
-      this.shirjana.root.position.set(anchor.position.x + 0.8, 0, anchor.position.z);
+      // Aalekh seated on left side of bench, sitting directly on cushion
+      const aalekhPos = anchor.position.clone()
+        .addScaledVector(rightVec, -0.38)
+        .addScaledVector(fwdVec, 0.04);
+      aalekhPos.y = anchor.position.y;
+      this.charPos.copy(aalekhPos);
+      this.charRotation = anchor.rotationY;
+
+      this.aalekh.root.position.copy(aalekhPos);
+      this.aalekh.root.rotation.y = anchor.rotationY;
+      this.aalekh.setSitting(true);
+
+      // Sana seated on right side of bench, sitting directly on cushion
+      const sanaPos = anchor.position.clone()
+        .addScaledVector(rightVec, +0.38)
+        .addScaledVector(fwdVec, 0.04);
+      sanaPos.y = anchor.position.y;
+      this.shirjana.root.position.copy(sanaPos);
       this.shirjana.root.rotation.y = anchor.rotationY;
       this.shirjana.setSitting(true);
+
+      // Third-person scenic camera framing: behind couple looking over shoulders at fireworks
+      this.orbitYaw = anchor.rotationY + Math.PI;
+      this.orbitPitch = 0.12;
+      this.orbitDistance = 4.2;
+    } else if (anchor.id === "seat-sofa-center") {
+      this.charPos.set(anchor.position.x, anchor.position.y, anchor.position.z);
+      this.charRotation = anchor.rotationY;
+      this.aalekh.root.position.copy(this.charPos);
+      this.aalekh.root.rotation.y = this.charRotation;
+      this.aalekh.setSitting(true);
+
+      this.shirjana.root.position.set(anchor.position.x + 0.8, anchor.position.y, anchor.position.z);
+      this.shirjana.root.rotation.y = anchor.rotationY;
+      this.shirjana.setSitting(true);
+
+      this.orbitYaw = anchor.rotationY + Math.PI;
+      this.orbitPitch = 0.20;
+      this.orbitDistance = 4.0;
     } else {
-      this.shirjana.root.position.set(anchor.position.x + 0.9, 0, anchor.position.z);
+      this.charPos.set(anchor.position.x, anchor.position.y, anchor.position.z);
+      this.charRotation = anchor.rotationY;
+      this.aalekh.root.position.copy(this.charPos);
+      this.aalekh.root.rotation.y = this.charRotation;
+      this.aalekh.setSitting(true);
+
+      this.shirjana.root.position.set(anchor.position.x + 0.9, anchor.position.y, anchor.position.z);
       this.shirjana.root.rotation.y = anchor.rotationY;
       this.shirjana.setSitting(true);
+
+      this.orbitYaw = anchor.rotationY + Math.PI;
+      this.orbitPitch = 0.20;
+      this.orbitDistance = 4.0;
     }
 
-    // Smooth camera framing for conversation and TV
-    this.orbitYaw = anchor.rotationY;
-    this.orbitDistance = 3.6;
-    this.orbitPitch = 0.22;
-    this.snapCameraToTarget(3.6, 0.22, anchor.rotationY);
+    this.manualLookTimer = 0;
   }
 
   public standUp() {
     if (!this.isSitting) return;
+    const wasMountain = this.activeSeatAnchor?.id === "seat-mountain-fireworks-bench";
     this.isSitting = false;
     this.isWatchingTV = false;
     this.activeSeatAnchor = null;
@@ -627,9 +749,18 @@ export class LocalitySceneEngine {
     this.shirjana.setSitting(false);
 
     // Step slightly forward from the seat
-    this.charPos.z += 0.8;
+    if (wasMountain) {
+      const fwd = new THREE.Vector3(0, 0, 1.2).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.charRotation);
+      this.charPos.add(fwd);
+      this.orbitDistance = 7.5;
+      this.orbitPitch = 0.28;
+    } else {
+      this.charPos.z += 0.8;
+      this.orbitDistance = this.isInsideBuilding ? 4.8 : 7.5;
+      this.orbitPitch = 0.24;
+    }
     this.aalekh.root.position.copy(this.charPos);
-    this.shirjana.root.position.set(this.charPos.x + 1.1, 0, this.charPos.z);
+    this.shirjana.root.position.set(this.charPos.x + 0.52, this.charPos.y, this.charPos.z);
   }
 
   public watchTV() {
@@ -653,10 +784,7 @@ export class LocalitySceneEngine {
   }
 
   public toggleHoldingHands(): boolean {
-    this.isHoldingHands = !this.isHoldingHands;
-    this.aalekh.setHoldingHands(this.isHoldingHands);
-    this.shirjana.setHoldingHands(this.isHoldingHands);
-    return this.isHoldingHands;
+    return false;
   }
 
   // Sacred Temple Actions
@@ -736,6 +864,7 @@ export class LocalitySceneEngine {
   public dispose() {
     this.stop();
     window.removeEventListener("resize", this.handleResize);
+    this.mountainSuite.dispose();
     if (this.renderer.domElement.parentNode) {
       this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
     }
@@ -759,6 +888,12 @@ export class LocalitySceneEngine {
     this.templeSuite.updateAnimation(time);
     this.hanumanSuite.updateAnimation(time);
     this.interiorSuite.updateAnimation(time);
+    this.mountainSuite.update(delta, time);
+
+    // Update Interactive Indian Haveli Gates (Smooth Swinging Physics)
+    this.interactiveGates.forEach((gate) => {
+      gate.update(delta, this.charPos);
+    });
 
     // Animate Waypoint Beacon
     if (this.waypointBeaconGroup && this.waypointBeaconGroup.visible) {
@@ -777,8 +912,13 @@ export class LocalitySceneEngine {
   };
 
   private updateCharacterPhysics(delta: number, time: number) {
-    if (this.isSitting && (Math.abs(this.moveVector.x) > 0.05 || Math.abs(this.moveVector.y) > 0.05)) {
-      this.standUp();
+    if (this.isSitting) {
+      if (Math.abs(this.moveVector.x) > 0.05 || Math.abs(this.moveVector.y) > 0.05) {
+        this.standUp();
+      } else {
+        // Firmly maintain established seated positions with zero walking follow drift!
+        return;
+      }
     }
 
     const moveSpeed = this.isInsideBuilding ? 5.2 : this.isInsideTemple || this.isInsideHanuman ? 5.5 : 6.8;
@@ -803,71 +943,174 @@ export class LocalitySceneEngine {
           proposedDx = (moveDirX / len) * moveSpeed * delta;
           proposedDz = (moveDirZ / len) * moveSpeed * delta;
           this.isWalking = true;
-          this.charRotation = Math.atan2(moveDirX, moveDirZ);
+
+          // Smooth Angular Interpolation (No instantaneous snapping or face flips)
+          const targetAngle = Math.atan2(moveDirX, moveDirZ);
+          let diff = (targetAngle - this.charRotation) % (Math.PI * 2);
+          if (diff < -Math.PI) diff += Math.PI * 2;
+          if (diff > Math.PI) diff -= Math.PI * 2;
+          this.charRotation += diff * Math.min(1.0, delta * 12.0);
         }
       } else {
         this.isWalking = false;
       }
     }
 
-    // Resolve Movement with Wall Sliding Physics
+    // Resolve Movement with Wall Sliding Physics & 3D Floor Awareness
     const resolved = this.collisionSystem.resolveMovement(
       this.charPos.x,
       this.charPos.z,
       proposedDx,
-      proposedDz
+      proposedDz,
+      this.charPos.y
     );
 
+    // 1. Sana's Home Seamless Auto-Doorway Transition
+    if (!this.isInsideBuilding) {
+      if (
+        this.charPos.x >= -21.8 &&
+        this.charPos.x <= -18.2 &&
+        this.charPos.z <= -3.6 &&
+        this.charPos.z >= -4.6
+      ) {
+        this.enterBuilding();
+        return;
+      }
+    } else {
+      if (
+        this.charPos.x >= -21.8 &&
+        this.charPos.x <= -18.2 &&
+        this.charPos.z >= -4.4 &&
+        this.charPos.z <= -3.2
+      ) {
+        this.exitBuilding();
+        return;
+      }
+    }
+
+    // 2. Shiva Temple Seamless Auto-Doorway Transition & Step Elevation
+    if (!this.isInsideTemple) {
+      if (
+        this.charPos.x >= 11.0 &&
+        this.charPos.x <= 17.0 &&
+        this.charPos.z <= -21.4 &&
+        this.charPos.z >= -23.4
+      ) {
+        const stepProgress = Math.min(1.0, Math.max(0.0, (-21.4 - this.charPos.z) / 1.8));
+        this.charPos.y = stepProgress * 0.40;
+      }
+      if (
+        this.charPos.x >= 11.5 &&
+        this.charPos.x <= 16.5 &&
+        this.charPos.z <= -23.5 &&
+        this.charPos.z >= -24.8
+      ) {
+        this.enterTemple();
+        return;
+      }
+    } else {
+      if (
+        this.charPos.x >= 11.5 &&
+        this.charPos.x <= 16.5 &&
+        this.charPos.z >= -23.8
+      ) {
+        this.exitTemple();
+        return;
+      }
+    }
+
+    // 3. Hanuman Temple Seamless Auto-Doorway Transition & Step Elevation
+    if (!this.isInsideHanuman) {
+      if (
+        this.charPos.x >= -15.0 &&
+        this.charPos.x <= -9.0 &&
+        this.charPos.z <= -22.4 &&
+        this.charPos.z >= -24.4
+      ) {
+        const stepProgress = Math.min(1.0, Math.max(0.0, (-22.4 - this.charPos.z) / 1.8));
+        this.charPos.y = stepProgress * 0.40;
+      }
+      if (
+        this.charPos.x >= -14.5 &&
+        this.charPos.x <= -9.5 &&
+        this.charPos.z <= -24.5 &&
+        this.charPos.z >= -25.8
+      ) {
+        this.enterHanuman();
+        return;
+      }
+    } else {
+      if (
+        this.charPos.x >= -14.5 &&
+        this.charPos.x <= -9.5 &&
+        this.charPos.z >= -24.8
+      ) {
+        this.exitHanuman();
+        return;
+      }
+    }
+
     if (this.isInsideBuilding) {
-      this.charPos.x = Math.max(this.interiorSuite.bounds.minX + 0.4, Math.min(this.interiorSuite.bounds.maxX - 0.4, resolved.x));
-      this.charPos.z = Math.max(this.interiorSuite.bounds.minZ + 0.4, Math.min(this.interiorSuite.bounds.maxZ - 0.4, resolved.z));
+      this.charPos.x = Math.max(this.interiorSuite.bounds.minX + 0.5, Math.min(this.interiorSuite.bounds.maxX - 0.5, resolved.x));
+      this.charPos.z = Math.max(this.interiorSuite.bounds.minZ + 0.5, Math.min(this.interiorSuite.bounds.maxZ - 0.5, resolved.z));
+
+      // Dynamic 2-Storey Floor Elevation: ground floor (0m), stairs (0->3.4m), upper floor (3.4m)
+      if (!this.isSitting) {
+        const targetElev = this.interiorSuite.getFloorElevation(this.charPos.x, this.charPos.z, this.charPos.y);
+        this.charPos.y += (targetElev - this.charPos.y) * Math.min(1.0, delta * 12.0);
+      }
     } else if (this.isInsideTemple) {
-      this.charPos.x = Math.max(this.templeSuite.interiorBounds.minX + 0.4, Math.min(this.templeSuite.interiorBounds.maxX - 0.4, resolved.x));
-      this.charPos.z = Math.max(this.templeSuite.interiorBounds.minZ + 0.4, Math.min(this.templeSuite.interiorBounds.maxZ - 0.4, resolved.z));
+      this.charPos.x = Math.max(this.templeSuite.interiorBounds.minX + 0.45, Math.min(this.templeSuite.interiorBounds.maxX - 0.45, resolved.x));
+      this.charPos.z = Math.max(this.templeSuite.interiorBounds.minZ + 0.45, Math.min(this.templeSuite.interiorBounds.maxZ - 0.45, resolved.z));
+      this.charPos.y = 0.40; // Standing atop sanctum sandstone plinth
     } else if (this.isInsideHanuman) {
-      this.charPos.x = Math.max(this.hanumanSuite.interiorBounds.minX + 0.4, Math.min(this.hanumanSuite.interiorBounds.maxX - 0.4, resolved.x));
-      this.charPos.z = Math.max(this.hanumanSuite.interiorBounds.minZ + 0.4, Math.min(this.hanumanSuite.interiorBounds.maxZ - 0.4, resolved.z));
+      this.charPos.x = Math.max(this.hanumanSuite.interiorBounds.minX + 0.45, Math.min(this.hanumanSuite.interiorBounds.maxX - 0.45, resolved.x));
+      this.charPos.z = Math.max(this.hanumanSuite.interiorBounds.minZ + 0.45, Math.min(this.hanumanSuite.interiorBounds.maxZ - 0.45, resolved.z));
+      this.charPos.y = 0.40; // Standing atop sanctum sandstone plinth
     } else {
       this.charPos.x = Math.max(-145, Math.min(145, resolved.x));
       this.charPos.z = Math.max(-125, Math.min(105, resolved.z));
+
+      // Sample Scenic Mountain trail & summit elevation
+      const mountainElev = this.mountainSuite.getTrailElevation(this.charPos.x, this.charPos.z);
+      if (mountainElev !== null) {
+        this.charPos.y += (mountainElev - this.charPos.y) * Math.min(1.0, delta * 14.0);
+      } else if (
+        !(this.charPos.x >= 11.0 && this.charPos.x <= 17.0 && this.charPos.z <= -21.4 && this.charPos.z >= -23.4) &&
+        !(this.charPos.x >= -15.0 && this.charPos.x <= -9.0 && this.charPos.z <= -22.4 && this.charPos.z >= -24.4)
+      ) {
+        this.charPos.y = 0;
+      }
     }
 
-    this.aalekh.root.position.set(this.charPos.x, 0, this.charPos.z);
-    this.aalekh.root.rotation.y = this.charRotation + (this.isHoldingHands ? 0.04 : 0); // Gentle affectionate glance towards Sana
+    this.aalekh.root.position.set(this.charPos.x, this.charPos.y, this.charPos.z);
+    this.aalekh.root.rotation.y = this.charRotation;
     this.aalekh.updateAnimation(this.isWalking, time);
 
-    // Sana walks Hand-in-Hand beside Aalekh like a sweet lovey-dovey couple
-    // Spaced at 0.52m (their inner hands clasped closely together in sweet harmony)
-    const spacing = this.isHoldingHands ? 0.52 : 0.85;
-    const rightSideX = Math.cos(this.charRotation);
-    const rightSideZ = -Math.sin(this.charRotation);
-    const sanaTargetX = this.charPos.x + rightSideX * spacing;
-    const sanaTargetZ = this.charPos.z + rightSideZ * spacing;
+    // Sana walks gracefully beside Aalekh as independent companion
+    // Spaced at 0.78m on his right side (+X in local coordinates) so their natural arm swings never intersect
+    const spacing = 0.78;
+    const offset = new THREE.Vector3(spacing, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.charRotation);
+    const sanaTargetX = this.charPos.x + offset.x;
+    const sanaTargetZ = this.charPos.z + offset.z;
 
-    // Fast, responsive lockstep tracking so hands stay clasped without drifting
-    this.shirjana.root.position.x += (sanaTargetX - this.shirjana.root.position.x) * 0.42;
-    this.shirjana.root.position.z += (sanaTargetZ - this.shirjana.root.position.z) * 0.42;
-    this.shirjana.root.rotation.y = this.charRotation - (this.isHoldingHands ? 0.06 : 0.01); // Sana leans/glances affectionately towards Aalekh
+    const followRate = 0.65;
+    this.shirjana.root.position.x += (sanaTargetX - this.shirjana.root.position.x) * followRate;
+    this.shirjana.root.position.y += (this.charPos.y - this.shirjana.root.position.y) * 0.70;
+    this.shirjana.root.position.z += (sanaTargetZ - this.shirjana.root.position.z) * followRate;
+    this.shirjana.root.rotation.y = this.charRotation;
     this.shirjana.updateAnimation(this.isWalking, time);
-
-    // Bunny hops beside Aalekh and Sana joyfully
-    const bunnyTargetX = this.charPos.x - rightSideX * 0.75 - Math.sin(this.charRotation) * 0.85;
-    const bunnyTargetZ = this.charPos.z - rightSideZ * 0.75 - Math.cos(this.charRotation) * 0.85;
-    this.bunny.root.position.x += (bunnyTargetX - this.bunny.root.position.x) * 0.22;
-    this.bunny.root.position.z += (bunnyTargetZ - this.bunny.root.position.z) * 0.22;
-    this.bunny.root.rotation.y = this.charRotation;
-    this.bunny.updateAnimation(this.isWalking, time);
   }
 
   private updateCameraSystem(delta: number, time: number) {
-    // 1. Process Right Joystick look input (Manual Orbit)
+    // 1. Process Right Joystick / Mouse / Touch look input (Manual Orbit)
     if (this.cameraMode !== "story" && this.lookVector.lengthSq() > 0.01) {
       const lookSpeed = 2.4 * this.orbitSensitivity;
       this.orbitYaw -= this.lookVector.x * lookSpeed * delta;
       const pitchFactor = this.invertPitch ? 1 : -1;
       this.orbitPitch = Math.max(
-        0.08,
-        Math.min(1.15, this.orbitPitch + this.lookVector.y * pitchFactor * lookSpeed * delta)
+        -0.45,
+        Math.min(1.20, this.orbitPitch + this.lookVector.y * pitchFactor * lookSpeed * delta)
       );
       this.manualLookTimer = 1.4;
     } else if (this.manualLookTimer > 0) {
@@ -883,15 +1126,51 @@ export class LocalitySceneEngine {
 
     const lerpFactor = Math.min(delta * 5.5, 1.0);
 
+    // SITTING THIRD-PERSON CAMERA (Automatic Cinematic Vista framing when seated, full 360 orbit)
+    if (this.isSitting && this.activeSeatAnchor) {
+      const anchor = this.activeSeatAnchor;
+      const isMountain = anchor.id === "seat-mountain-fireworks-bench";
+      const targetY = anchor.position.y + 1.1;
+
+      const cosPitch = Math.cos(this.orbitPitch);
+      const sinPitch = Math.sin(this.orbitPitch);
+      const sinYaw = Math.sin(this.orbitYaw);
+      const cosYaw = Math.cos(this.orbitYaw);
+      const dist = Math.max(2.8, Math.min(8.0, this.orbitDistance));
+
+      this.targetCameraPos.set(
+        anchor.position.x + sinYaw * cosPitch * dist,
+        Math.max(anchor.position.y + 0.6, targetY + sinPitch * dist + (isMountain ? 0.35 : 0)),
+        anchor.position.z + cosYaw * cosPitch * dist
+      );
+
+      if (isMountain) {
+        // Look ahead past couple towards the fireworks in the valley sky
+        this.targetLookAt.set(
+          anchor.position.x - sinYaw * 12.0,
+          targetY + 2.5 - sinPitch * 6.0,
+          anchor.position.z - cosYaw * 12.0
+        );
+      } else {
+        this.targetLookAt.set(anchor.position.x, targetY, anchor.position.z);
+      }
+
+      this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 7.0));
+      this.currentLookAt.lerp(this.targetLookAt, Math.min(1.0, delta * 7.0));
+      this.camera.lookAt(this.currentLookAt);
+      return;
+    }
+
     if (this.cameraMode === "story") {
       const sweepX = -10 + Math.sin(time * 0.15) * 6;
       const sweepZ = 24 + Math.cos(time * 0.15) * 4;
       this.targetCameraPos.set(sweepX, 15, sweepZ);
       this.targetLookAt.set(0, 2.5, 0);
-    } else if (this.cameraMode === "exploration") {
+    } else {
+      // EXCLUSIVELY THIRD PERSON EXPLORATION CAMERA
       const isInterior = this.isInsideBuilding || this.isInsideTemple || this.isInsideHanuman;
-      const charHeadY = 1.6;
-      const baseDist = this.isInsideBuilding ? 4.6 : (this.isInsideTemple || this.isInsideHanuman) ? 5.2 : 8.5;
+      const charHeadY = this.charPos.y + 1.6;
+      const baseDist = this.isInsideBuilding ? 4.5 : (this.isInsideTemple || this.isInsideHanuman) ? 5.2 : 7.5;
 
       const cosPitch = Math.cos(this.orbitPitch);
       const sinPitch = Math.sin(this.orbitPitch);
@@ -900,9 +1179,9 @@ export class LocalitySceneEngine {
 
       let effectiveDist = baseDist;
 
-      // 3. Camera Collision Obstruction Avoidance (Multi-ray test)
+      // Obstruction avoidance raycast
       const candidateX = this.charPos.x + sinYaw * cosPitch * effectiveDist;
-      const candidateY = Math.max(1.3, sinPitch * effectiveDist + charHeadY);
+      const candidateY = Math.max(this.charPos.y + 1.3, sinPitch * effectiveDist + charHeadY);
       const candidateZ = this.charPos.z + cosYaw * cosPitch * effectiveDist;
 
       const camCheck = this.collisionSystem.checkCameraObstruction(
@@ -915,13 +1194,13 @@ export class LocalitySceneEngine {
       );
 
       if (camCheck.hit) {
-        const minSafeDist = isInterior ? 2.8 : 4.0;
+        const minSafeDist = isInterior ? 2.8 : 3.8;
         effectiveDist = Math.max(minSafeDist, effectiveDist * camCheck.safeDistRatio);
       }
 
       const offsetX = sinYaw * cosPitch * effectiveDist;
-      const maxY = isInterior ? 4.2 : 25;
-      const offsetY = Math.max(1.2, Math.min(maxY, sinPitch * effectiveDist + charHeadY));
+      const maxY = isInterior ? this.charPos.y + 5.5 : 25;
+      const offsetY = Math.max(this.charPos.y + 1.2, Math.min(maxY, sinPitch * effectiveDist + charHeadY));
       const offsetZ = cosYaw * cosPitch * effectiveDist;
 
       this.targetCameraPos.set(
@@ -930,49 +1209,9 @@ export class LocalitySceneEngine {
         this.charPos.z + offsetZ
       );
 
-      // Dynamic Look-Ahead: slightly offset look target toward movement direction
       const lookAheadX = this.isWalking ? Math.sin(this.charRotation) * 0.8 : 0;
       const lookAheadZ = this.isWalking ? Math.cos(this.charRotation) * 0.8 : 0;
       this.targetLookAt.set(this.charPos.x + lookAheadX, charHeadY, this.charPos.z + lookAheadZ);
-    } else if (this.cameraMode === "closeup") {
-      const cosPitch = Math.cos(this.orbitPitch);
-      const sinPitch = Math.sin(this.orbitPitch);
-      const sinYaw = Math.sin(this.orbitYaw);
-      const cosYaw = Math.cos(this.orbitYaw);
-      const dist = Math.min(this.orbitDistance, 3.2);
-
-      this.targetCameraPos.set(
-        this.charPos.x + sinYaw * cosPitch * dist,
-        Math.max(1.4, sinPitch * dist + 1.2),
-        this.charPos.z + cosYaw * cosPitch * dist
-      );
-      this.targetLookAt.set(this.charPos.x, 1.5, this.charPos.z);
-    } else if (this.cameraMode === "street") {
-      const cosPitch = Math.cos(this.orbitPitch);
-      const sinPitch = Math.sin(this.orbitPitch);
-      const sinYaw = Math.sin(this.orbitYaw);
-      const cosYaw = Math.cos(this.orbitYaw);
-      const dist = Math.min(this.orbitDistance, 5.5);
-
-      this.targetCameraPos.set(
-        this.charPos.x + sinYaw * cosPitch * dist,
-        Math.max(1.3, sinPitch * dist + 1.0),
-        this.charPos.z + cosYaw * cosPitch * dist
-      );
-      this.targetLookAt.set(this.charPos.x, 1.5, this.charPos.z);
-    } else if (this.cameraMode === "birdeye") {
-      const pitch = 1.15;
-      const dist = 36.0;
-      this.targetCameraPos.set(
-        this.charPos.x + Math.sin(this.orbitYaw) * Math.cos(pitch) * dist,
-        34.0,
-        this.charPos.z + Math.cos(this.orbitYaw) * Math.cos(pitch) * dist
-      );
-      this.targetLookAt.set(this.charPos.x, 0, this.charPos.z);
-    } else if (this.cameraMode === "lanternsky") {
-      const lanternPos = this.stations.stationC_LanternMesh.position;
-      this.targetCameraPos.set(lanternPos.x - 8, Math.max(lanternPos.y - 2, 4), lanternPos.z + 10);
-      this.targetLookAt.copy(lanternPos);
     }
 
     this.currentCameraPos.lerp(this.targetCameraPos, lerpFactor);
@@ -1080,5 +1319,16 @@ export class LocalitySceneEngine {
     if (nearest === "station-b" && this.rangoliProgress < 1) {
       this.rangoliProgress = Math.min(1, this.rangoliProgress + 0.01);
     }
+  }
+
+  public toggleGate(gateId: string): boolean {
+    const cleanId = gateId.replace(/^station-/, "").replace(/^gate-/, "");
+    const gate = this.interactiveGates.find(
+      (g) => g.id === cleanId || g.id === `gate-${cleanId}` || `station-${g.id}` === gateId
+    );
+    if (gate) {
+      return gate.toggle();
+    }
+    return false;
   }
 }

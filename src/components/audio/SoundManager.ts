@@ -58,6 +58,37 @@ class SoundManager {
     });
   }
 
+  /**
+   * Plays an authentic wooden Haveli gate creak and auspicious chime
+   */
+  public playGateOpen() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    // Resonant wooden door creak
+    const creakOsc = this.ctx.createOscillator();
+    const creakGain = this.ctx.createGain();
+    creakOsc.type = "sawtooth";
+    creakOsc.frequency.setValueAtTime(110, now);
+    creakOsc.frequency.exponentialRampToValueAtTime(85, now + 0.35);
+
+    creakGain.gain.setValueAtTime(0.04, now);
+    creakGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+    creakOsc.connect(creakGain);
+    creakGain.connect(this.ctx.destination);
+    creakOsc.start(now);
+    creakOsc.stop(now + 0.42);
+
+    // Warm welcoming chime
+    setTimeout(() => {
+      this.playDiyaChime();
+    }, 180);
+  }
+
   public playFireworkLaunch() {
     if (!this.enabled) return;
     this.initCtx();

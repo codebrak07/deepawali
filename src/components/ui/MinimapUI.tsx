@@ -193,9 +193,9 @@ export function MinimapUI({
                   {b.id === "b-shiva-temple" && (
                     <text
                       x={toSvgX(b.x)}
-                      y={toSvgY(b.z) + 3}
+                      y={toSvgY(b.z) + 1.8}
                       fill="#ffffff"
-                      fontSize="5"
+                      fontSize="2.8"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
@@ -205,9 +205,9 @@ export function MinimapUI({
                   {b.id === "b-hanuman-mandir" && (
                     <text
                       x={toSvgX(b.x)}
-                      y={toSvgY(b.z) + 3}
+                      y={toSvgY(b.z) + 1.8}
                       fill="#ffffff"
-                      fontSize="5"
+                      fontSize="2.8"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
@@ -217,9 +217,9 @@ export function MinimapUI({
                   {b.id === "b-sana-home" && (
                     <text
                       x={toSvgX(b.x)}
-                      y={toSvgY(b.z) + 3}
+                      y={toSvgY(b.z) + 1.8}
                       fill="#ffffff"
-                      fontSize="5"
+                      fontSize="2.8"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
@@ -230,6 +230,14 @@ export function MinimapUI({
               );
             })}
 
+            {/* Mountain Fireworks Summit Landmark on Minimap */}
+            <g transform={`translate(${toSvgX(105)}, ${toSvgY(-95)})`}>
+              <circle r="6" fill="#6366f1" opacity="0.45" stroke="#a855f7" strokeWidth="0.8" />
+              <text x="0" y="1.5" fontSize="2.6" fontWeight="bold" fill="#fde047" textAnchor="middle">
+                MOUNTAIN 🏔️
+              </text>
+            </g>
+
             {/* Waypoint Route Line */}
             {waypoint && (
               <line
@@ -238,8 +246,8 @@ export function MinimapUI({
                 x2={toSvgX(waypoint.x)}
                 y2={toSvgY(waypoint.z)}
                 stroke="#f59e0b"
-                strokeWidth="2.5"
-                strokeDasharray="5 3"
+                strokeWidth="2"
+                strokeDasharray="4 2"
                 className="animate-pulse"
               />
             )}
@@ -250,8 +258,8 @@ export function MinimapUI({
               const sy = toSvgY(st.z);
               return (
                 <g key={st.id} transform={`translate(${sx}, ${sy})`}>
-                  <circle r="6" fill="#f59e0b" opacity="0.4" className="animate-ping" />
-                  <circle r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
+                  <circle r="2.2" fill="#f59e0b" opacity="0.35" className="animate-ping" />
+                  <circle r="1.3" fill="#f59e0b" stroke="#ffffff" strokeWidth="0.4" />
                 </g>
               );
             })}
@@ -263,15 +271,15 @@ export function MinimapUI({
               })`}
             >
               {/* Outer Pulse */}
-              <circle r="9" fill="#38bdf8" opacity="0.35" className="animate-ping" />
+              <circle r="4.5" fill="#38bdf8" opacity="0.35" className="animate-ping" />
               {/* Directional Heading Cone / Arrow */}
               <polygon
-                points="0,-8 -5,5 0,2 5,5"
+                points="0,-4.5 -3,3 0,1.2 3,3"
                 fill="#38bdf8"
                 stroke="#ffffff"
-                strokeWidth="1.2"
+                strokeWidth="0.6"
               />
-              <circle r="2" fill="#ffffff" />
+              <circle r="1.1" fill="#ffffff" />
             </g>
           </svg>
 
@@ -490,12 +498,12 @@ export function MinimapUI({
                   const sy = toSvgY(st.z);
                   return (
                     <g key={st.id} transform={`translate(${sx}, ${sy})`}>
-                      <circle r="7" fill="#f59e0b" opacity="0.3" className="animate-ping" />
-                      <circle r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
+                      <circle r="4" fill="#f59e0b" opacity="0.3" className="animate-ping" />
+                      <circle r="2.2" fill="#f59e0b" stroke="#ffffff" strokeWidth="0.6" />
                       <text
                         x="0"
-                        y="10"
-                        fontSize="5"
+                        y="5"
+                        fontSize="2.8"
                         fontWeight="bold"
                         fill="#fde68a"
                         textAnchor="middle"
@@ -509,17 +517,17 @@ export function MinimapUI({
                 {/* Waypoint Marker Pin */}
                 {waypoint && (
                   <g transform={`translate(${toSvgX(waypoint.x)}, ${toSvgY(waypoint.z)})`}>
-                    <circle r="8" fill="#f59e0b" opacity="0.4" className="animate-ping" />
-                    <polygon points="0,-12 -6,-2 0,-5 6,-2" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
-                    <circle r="3" fill="#ffffff" />
+                    <circle r="5" fill="#f59e0b" opacity="0.4" className="animate-ping" />
+                    <polygon points="0,-7 -3.5,-1 0,-3 3.5,-1" fill="#f59e0b" stroke="#ffffff" strokeWidth="0.7" />
+                    <circle r="1.8" fill="#ffffff" />
                   </g>
                 )}
 
                 {/* Live Player Marker */}
                 <g transform={`translate(${playerSvgX}, ${playerSvgY}) rotate(${playerDegrees})`}>
-                  <circle r="10" fill="#38bdf8" opacity="0.4" className="animate-ping" />
-                  <polygon points="0,-9 -6,6 0,2 6,6" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.2" />
-                  <circle r="2.5" fill="#ffffff" />
+                  <circle r="6" fill="#38bdf8" opacity="0.4" className="animate-ping" />
+                  <polygon points="0,-5.5 -3.5,3.5 0,1.2 3.5,3.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" />
+                  <circle r="1.5" fill="#ffffff" />
                 </g>
               </svg>
             </div>
@@ -550,6 +558,12 @@ export function MinimapUI({
                 className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 cursor-pointer"
               >
                 🏪 Dattawadi Bazaar
+              </button>
+              <button
+                onClick={() => onSetWaypoint({ x: 104, z: -92 })}
+                className="px-2 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border border-purple-400/50 cursor-pointer"
+              >
+                🏔️ Mountain Fireworks
               </button>
             </div>
 

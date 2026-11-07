@@ -28,6 +28,7 @@ import {
   Bell,
   Sun,
   Lightbulb,
+  Crosshair,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -65,8 +66,7 @@ interface GameOverlayUIProps {
   onStopWatchingTV?: () => void;
   onNextTVChannel?: () => void;
   onToggleLamps?: () => void;
-  isHoldingHands?: boolean;
-  onToggleHoldingHands?: () => void;
+  onTriggerFireworks?: () => void;
 }
 
 export function GameOverlayUI({
@@ -101,20 +101,13 @@ export function GameOverlayUI({
   onStopWatchingTV,
   onNextTVChannel,
   onToggleLamps,
-  isHoldingHands = true,
-  onToggleHoldingHands,
+  onTriggerFireworks,
 }: GameOverlayUIProps) {
-  const cameraPresets = [
-    { id: "exploration", label: "Third Person", icon: Eye, tip: "Free Orbit Follow" },
-    { id: "closeup", label: "Close-up", icon: Heart, tip: "Intimate View" },
-    { id: "street", label: "Street Eye", icon: MapPin, tip: "Dattawadi Perspective" },
-    { id: "birdeye", label: "Bird's-eye", icon: Compass, tip: "Locality Overview" },
-  ];
-
   const fastTravelSpots = [
     { id: "station-shiva", name: "Shiva Temple", icon: Flame, x: 14, z: -21 },
     { id: "station-hanuman", name: "Hanuman Mandir", icon: Sun, x: -12, z: -21 },
-    { id: "station-home", name: "Sana Home", icon: DoorOpen, x: -20, z: -7 },
+    { id: "station-home", name: "Sana Home", icon: DoorOpen, x: -20, z: -1.5 },
+    { id: "station-mountain", name: "Mountain Viewpoint", icon: Sparkles, x: 104, z: -92 },
     { id: "station-a", name: "Diyas", icon: Flame, x: 0, z: 8 },
     { id: "station-b", name: "Rangoli", icon: Palette, x: 0, z: -24 },
     { id: "station-c", name: "Lantern", icon: Send, x: 30, z: 0 },
@@ -281,31 +274,49 @@ export function GameOverlayUI({
                   <span>Stand Up</span>
                 </button>
 
-                {isWatchingTV ? (
-                  <>
+                {/* Outdoors on Mountain Fireworks Bench */}
+                {!isInsideBuilding && (
+                  <button
+                    onClick={() => {
+                      if (onTriggerFireworks) onTriggerFireworks();
+                      else onInteractStation("station-mountain-bench");
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-yellow-400 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-lg shadow-amber-500/30 animate-pulse"
+                    title="Launch Choreographed Diwali Fireworks Show"
+                  >
+                    <Sparkles className="w-4 h-4 text-slate-950" />
+                    <span>Launch Fireworks 🎆</span>
+                  </button>
+                )}
+
+                {/* Indoors in Sana's Living Suite */}
+                {isInsideBuilding && (
+                  isWatchingTV ? (
+                    <>
+                      <button
+                        onClick={onNextTVChannel}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
+                        title="Next Channel"
+                      >
+                        <Tv className="w-3.5 h-3.5" />
+                        <span>Channel: {tvChannelName}</span>
+                      </button>
+                      <button
+                        onClick={onStopWatchingTV}
+                        className="px-2.5 py-1 rounded-full bg-rose-600/80 text-white font-semibold text-xs hover:bg-rose-600 transition-colors cursor-pointer"
+                      >
+                        Turn Off
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={onNextTVChannel}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
-                      title="Next Channel"
+                      onClick={onWatchTV}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-600 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
                     >
                       <Tv className="w-3.5 h-3.5" />
-                      <span>Channel: {tvChannelName}</span>
+                      <span>Watch TV</span>
                     </button>
-                    <button
-                      onClick={onStopWatchingTV}
-                      className="px-2.5 py-1 rounded-full bg-rose-600/80 text-white font-semibold text-xs hover:bg-rose-600 transition-colors cursor-pointer"
-                    >
-                      Turn Off
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={onWatchTV}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-600 text-white font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
-                  >
-                    <Tv className="w-3.5 h-3.5" />
-                    <span>Watch TV</span>
-                  </button>
+                  )
                 )}
               </div>
             )}
@@ -553,7 +564,8 @@ export function GameOverlayUI({
             )}
 
             {/* 5. OUTDOOR STREET STATIONS */}
-            {!isInsideBuilding &&
+            {!isSitting &&
+              !isInsideBuilding &&
               !isInsideTemple &&
               !isInsideHanuman &&
               nearbyStation &&
@@ -568,57 +580,6 @@ export function GameOverlayUI({
                   </button>
                 </div>
               )}
-          </div>
-
-          {/* CAMERA TOOLS & PRESETS */}
-          <div className="self-center flex flex-wrap items-center justify-center gap-1.5 p-1 rounded-full bg-[#150a24]/90 backdrop-blur-md border border-amber-500/40 shadow-2xl pointer-events-auto">
-            {cameraPresets.map((cm) => {
-              const Icon = cm.icon;
-              const isActive = cameraMode === cm.id;
-              return (
-                <button
-                  key={cm.id}
-                  onClick={() => onCameraModeChange(cm.id as CameraViewMode)}
-                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold shadow-md shadow-amber-500/30 scale-105"
-                      : "text-slate-300 hover:text-white hover:bg-white/10"
-                  }`}
-                  title={cm.tip}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{cm.label}</span>
-                </button>
-              );
-            })}
-
-            {/* Camera Reset */}
-            <button
-              onClick={onResetCamera}
-              className="p-1 sm:px-2 py-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
-              title="Reset Camera Orientation"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Reset</span>
-            </button>
-
-            {/* Quick Zoom Buttons */}
-            <div className="flex items-center gap-0.5 border-l border-slate-700 pl-1">
-              <button
-                onClick={onZoomIn}
-                className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 cursor-pointer"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={onZoomOut}
-                className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 cursor-pointer"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
 
           {/* DUAL JOYSTICK ROW: LEFT (MOVE) + FAST TRAVEL (CENTER) + RIGHT (LOOK) */}
@@ -637,25 +598,43 @@ export function GameOverlayUI({
             <div className="flex flex-col items-center gap-1.5 pb-1 max-w-[260px] sm:max-w-none">
               {/* Desktop hint & Couple Status */}
               <div className="flex items-center gap-2">
-                <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#150a24]/85 border border-slate-800 text-slate-300 text-xs">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  <span>WASD: Move • Mouse Drag: Orbit • Tap Minimap: GPS Waypoint</span>
+                {/* Agency-Grade Camera Controls: Exclusively Third Person Follow Orbit + Reset & Zoom */}
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#150a24]/90 backdrop-blur-md border border-amber-500/40 shadow-lg">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
+                    <Eye className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Third Person</span>
+                  </div>
+
+                  <div className="w-[1px] h-3 bg-amber-500/30 mx-0.5" />
+                  <button
+                    onClick={onResetCamera}
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-white/15 text-slate-300 hover:text-white text-[10px] font-medium transition-colors cursor-pointer"
+                    title="Reset Camera Behind Couple"
+                  >
+                    <RotateCcw className="w-3 h-3 text-amber-400" />
+                    <span className="hidden md:inline">Reset</span>
+                  </button>
+                  <button
+                    onClick={onZoomIn}
+                    className="p-1 rounded-md hover:bg-white/15 text-slate-300 hover:text-white text-[10px] transition-colors cursor-pointer"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={onZoomOut}
+                    className="p-1 rounded-md hover:bg-white/15 text-slate-300 hover:text-white text-[10px] transition-colors cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="w-3 h-3" />
+                  </button>
                 </div>
 
-                {onToggleHoldingHands && (
-                  <button
-                    onClick={onToggleHoldingHands}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold backdrop-blur-md shadow-lg transition-all cursor-pointer ${
-                      isHoldingHands
-                        ? "bg-gradient-to-r from-rose-600/90 to-pink-600/90 border border-pink-400 text-white shadow-rose-950/50 hover:scale-105 active:scale-95"
-                        : "bg-slate-900/90 border border-slate-700 text-slate-300 hover:border-pink-400 hover:scale-105 active:scale-95"
-                    }`}
-                    title="Toggle Couple Hand-in-Hand Walking"
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${isHoldingHands ? "text-pink-200 fill-pink-300 animate-pulse" : "text-slate-400"}`} />
-                    <span>{isHoldingHands ? "Holding Hands 💖" : "Walk Apart"}</span>
-                  </button>
-                )}
+                <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#150a24]/85 border border-slate-800 text-slate-300 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span>WASD: Move • Mouse Drag: Orbit</span>
+                </div>
+
               </div>
 
               {/* Fast Travel Shortcuts */}

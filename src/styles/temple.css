@@ -1,0 +1,40 @@
+/* Creative OS 44_AGENCYLIKE_UI — Temple Exterior Theme */
+.temple-hud-container {
+  position: absolute;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.2);
+  z-index: 40;
+}
+
+.temple-title {
+  font-family: var(--font-heading, system-ui, -apple-system);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fef08a;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+}
+
+.temple-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ea580c;
+  background: rgba(254, 215, 170, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  border-radius: 9999px;
+  padding: 0.2rem 0.65rem;
+}
+

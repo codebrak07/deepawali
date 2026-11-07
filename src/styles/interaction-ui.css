@@ -1,0 +1,30 @@
+/* Creative OS 44_AGENCYLIKE_UI — Interactive Prompts & Floating Actions */
+.interaction-prompt-pill {
+  position: absolute;
+  bottom: 5.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 16px rgba(245, 158, 11, 0.25);
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  color: #fef08a;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  z-index: 42;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.interaction-prompt-pill:hover {
+  transform: translateX(-50%) translateY(-2px);
+  border-color: #f59e0b;
+  box-shadow: 0 12px 35px rgba(245, 158, 11, 0.4);
+}
+

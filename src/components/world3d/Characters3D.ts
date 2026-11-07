@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import {
-  loadBoyRiggedCharacter,
-  loadGirlRiggedCharacter,
-  RiggedHumanoidCharacter,
+  loadBoyCharacterRig,
+  Person1RigInstance,
+  loadGirlCharacterRig,
+  Person2RigInstance,
 } from "./CharacterModelLoader";
 
 export interface CharacterRig {
@@ -27,13 +28,6 @@ export interface CharacterRig {
   updateAnimation: (isWalking: boolean, time: number, moveSpeed?: number) => void;
 }
 
-export interface BunnyRig {
-  root: THREE.Group;
-  leftEar: THREE.Mesh;
-  rightEar: THREE.Mesh;
-  updateAnimation: (isWalking: boolean, time: number) => void;
-}
-
 // =========================================================================
 // 1. AALEKH (BOY) CHARACTER: Articulated Rig with Biomechanical Walking Kinematics
 // =========================================================================
@@ -45,9 +39,9 @@ export function createAalekhCharacter(): CharacterRig {
 
   // High-End Materials
   const kurtaMat = new THREE.MeshStandardMaterial({
-    color: 0x881337, // Royal Velvet Crimson
-    roughness: 0.5,
-    metalness: 0.15,
+    color: 0xf8fafc, // Pure Silk Cream Festive Kurta (Matching Reference Image)
+    roughness: 0.42,
+    metalness: 0.12,
   });
 
   const goldZariMat = new THREE.MeshStandardMaterial({
@@ -90,28 +84,27 @@ export function createAalekhCharacter(): CharacterRig {
   const proceduralGroup = new THREE.Group();
   proceduralGroup.name = "proceduralAalekhRig";
   root.add(proceduralGroup);
+  proceduralGroup.visible = true;
 
   const customModelGroup = new THREE.Group();
   customModelGroup.name = "customModelAalekhGroup";
   customModelGroup.visible = false;
   root.add(customModelGroup);
 
-  // Primary Articulated Rig with Biomechanical Skeletal Kinematics
-  proceduralGroup.visible = true;
-  customModelGroup.visible = false;
   let isCustomModelActive = false;
+  let boyRigInstance: Person1RigInstance | null = null;
 
-  let boyRig: RiggedHumanoidCharacter | null = null;
-  loadBoyRiggedCharacter()
+  // Load Person 1 (Boy) with GPU SkinnedMesh humanoid rig & active leg/arm articulation
+  loadBoyCharacterRig()
     .then((rig) => {
-      boyRig = rig;
+      boyRigInstance = rig;
       customModelGroup.add(rig.root);
       customModelGroup.visible = true;
       proceduralGroup.visible = false;
       isCustomModelActive = true;
     })
     .catch((err) => {
-      console.warn("Using procedural Aalekh fallback rig:", err);
+      console.warn("Could not load Aalekh SkinnedMesh rig, using procedural fallback:", err);
       proceduralGroup.visible = true;
       isCustomModelActive = false;
     });
@@ -314,8 +307,10 @@ export function createAalekhCharacter(): CharacterRig {
 
   const leftArm = leftArmData.shoulderJoint;
   const leftElbow = leftArmData.elbowJoint;
+  const leftWrist = leftArmData.wrist;
   const rightArm = rightArmData.shoulderJoint;
   const rightElbow = rightArmData.elbowJoint;
+  const rightWrist = rightArmData.wrist;
 
   // -----------------------------------------------------------------------
   // LEGS WITH ARTICULATED KNEE JOINTS & FOOT-PLANTING ANKLES (THE CORE FIX!)
@@ -392,138 +387,37 @@ export function createAalekhCharacter(): CharacterRig {
   const setPraying = (praying: boolean) => {
     isPraying = praying;
     if (praying) isSitting = false;
+    boyRigInstance?.setPraying(praying);
   };
 
   const setSitting = (sitting: boolean) => {
     isSitting = sitting;
     if (sitting) isPraying = false;
+    boyRigInstance?.setSitting(sitting);
   };
 
   const setHoldingHands = (holding: boolean) => {
     isHoldingHands = holding;
+    boyRigInstance?.setHoldingHands(holding);
   };
 
   const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
-    // 1. Skinned Humanoid 3D Character Model Skeletal Animation (if active)
-    if (boyRig && customModelGroup.visible) {
-      if (isSitting) {
-        boyRig.bones.hips.position.set(0, 0.46, 0.12);
-        boyRig.bones.hips.rotation.set(0, 0, 0);
-        boyRig.bones.spine.rotation.set(-0.06, 0, 0);
-        boyRig.bones.head.rotation.set(0.04, isHoldingHands ? -0.08 : 0, 0);
-
-        boyRig.bones.leftThigh.rotation.set(-Math.PI / 2, 0, 0);
-        boyRig.bones.rightThigh.rotation.set(-Math.PI / 2, 0, 0);
-        boyRig.bones.leftKnee.rotation.set(Math.PI / 2, 0, 0);
-        boyRig.bones.rightKnee.rotation.set(Math.PI / 2, 0, 0);
-        boyRig.bones.leftAnkle.rotation.set(0, 0, 0);
-        boyRig.bones.rightAnkle.rotation.set(0, 0, 0);
-
-        boyRig.bones.leftUpperArm.rotation.set(0.35, 0.15, 0.2);
-        boyRig.bones.leftForearm.rotation.set(0.45, 0, 0);
-        if (isHoldingHands) {
-          boyRig.bones.rightUpperArm.rotation.set(0.32, -0.25, -0.28);
-          boyRig.bones.rightForearm.rotation.set(0.42, 0, -0.15);
-        } else {
-          boyRig.bones.rightUpperArm.rotation.set(0.35, -0.15, -0.2);
-          boyRig.bones.rightForearm.rotation.set(0.45, 0, 0);
-        }
-      } else if (isPraying) {
-        const prayBreath = Math.sin(time * 2.0) * 0.01;
-        boyRig.bones.hips.position.set(0, 0.50 * 1.78 + prayBreath, 0);
-        boyRig.bones.hips.rotation.set(0, 0, 0);
-        boyRig.bones.spine.rotation.set(0.12, 0, 0);
-        boyRig.bones.head.rotation.set(0.15, 0, 0);
-
-        boyRig.bones.leftThigh.rotation.set(0, 0, 0);
-        boyRig.bones.rightThigh.rotation.set(0, 0, 0);
-        boyRig.bones.leftKnee.rotation.set(0, 0, 0);
-        boyRig.bones.rightKnee.rotation.set(0, 0, 0);
-        boyRig.bones.leftAnkle.rotation.set(0, 0, 0);
-        boyRig.bones.rightAnkle.rotation.set(0, 0, 0);
-
-        boyRig.bones.leftUpperArm.rotation.set(0.85, 0.45, 0.35);
-        boyRig.bones.leftForearm.rotation.set(0.85, 0, 0);
-        boyRig.bones.rightUpperArm.rotation.set(0.85, -0.45, -0.35);
-        boyRig.bones.rightForearm.rotation.set(0.85, 0, 0);
-      } else if (isWalking) {
-        const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
-        walkPhase += 0.085 * strideSpeed;
-
-        const thighSwing = Math.sin(walkPhase) * 0.48;
-        const leftThighAngle = thighSwing;
-        const rightThighAngle = -thighSwing;
-
-        // Biomechanical Knee Flexion (up to 72 degrees / 1.25 rad)
-        const leftKneeBend = Math.max(0, -Math.sin(walkPhase + 0.35)) * 0.72;
-        const rightKneeBend = Math.max(0, Math.sin(walkPhase + 0.35)) * 0.72;
-
-        boyRig.bones.leftThigh.rotation.x = leftThighAngle;
-        boyRig.bones.rightThigh.rotation.x = rightThighAngle;
-        boyRig.bones.leftKnee.rotation.x = leftKneeBend;
-        boyRig.bones.rightKnee.rotation.x = rightKneeBend;
-
-        // Ankle Counter-Rotation (keeps sole flat on ground)
-        boyRig.bones.leftAnkle.rotation.x = -(leftThighAngle + leftKneeBend) * 0.55;
-        boyRig.bones.rightAnkle.rotation.x = -(rightThighAngle + rightKneeBend) * 0.55;
-
-        // Pelvic Bounce & Hip Roll
-        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.045;
-        boyRig.bones.hips.position.y = 0.50 * 1.78 + bounce;
-        boyRig.bones.hips.rotation.z = Math.sin(walkPhase) * 0.025;
-        boyRig.bones.spine.rotation.y = -Math.cos(walkPhase) * 0.04;
-        boyRig.bones.head.rotation.y = isHoldingHands ? -0.06 + Math.cos(walkPhase) * 0.02 : Math.cos(walkPhase) * 0.02;
-
-        // Outer Left Arm Swings in Opposition to Leg Stride
-        boyRig.bones.leftUpperArm.rotation.x = -leftThighAngle * 0.75;
-        boyRig.bones.leftForearm.rotation.x = 0.25 + Math.max(0, leftThighAngle) * 0.35;
-
-        // Inner Right Arm Holding Hands with Sana (Folded arms uncurled and extended naturally!)
-        if (isHoldingHands) {
-          const handSwing = Math.sin(walkPhase) * 0.12;
-          boyRig.bones.rightUpperArm.rotation.set(0.14 + handSwing, -0.22, -0.32);
-          boyRig.bones.rightForearm.rotation.set(0.24, 0, -0.16);
-        } else {
-          boyRig.bones.rightUpperArm.rotation.x = leftThighAngle * 0.75;
-          boyRig.bones.rightForearm.rotation.x = 0.25 + Math.max(0, -leftThighAngle) * 0.35;
-        }
-      } else {
-        // Natural Idle Breathing
-        const breath = Math.sin(time * 2.2) * 0.012;
-        boyRig.bones.hips.position.set(0, 0.50 * 1.78 + breath, 0);
-        boyRig.bones.hips.rotation.set(0, 0, 0);
-        boyRig.bones.spine.rotation.set(0, 0, 0);
-        boyRig.bones.head.rotation.set(0, isHoldingHands ? -0.06 : 0, 0);
-
-        boyRig.bones.leftThigh.rotation.set(0, 0, 0);
-        boyRig.bones.rightThigh.rotation.set(0, 0, 0);
-        boyRig.bones.leftKnee.rotation.set(0, 0, 0);
-        boyRig.bones.rightKnee.rotation.set(0, 0, 0);
-        boyRig.bones.leftAnkle.rotation.set(0, 0, 0);
-        boyRig.bones.rightAnkle.rotation.set(0, 0, 0);
-
-        boyRig.bones.leftUpperArm.rotation.set(0.08, 0, 0.08);
-        boyRig.bones.leftForearm.rotation.set(0.12, 0, 0);
-
-        if (isHoldingHands) {
-          boyRig.bones.rightUpperArm.rotation.set(0.10, -0.20, -0.30);
-          boyRig.bones.rightForearm.rotation.set(0.22, 0, -0.14);
-        } else {
-          boyRig.bones.rightUpperArm.rotation.set(0.08, 0, -0.08);
-          boyRig.bones.rightForearm.rotation.set(0.12, 0, 0);
-        }
-      }
+    // 0. External Photorealistic 3D Model GPU SkinnedMesh Locomotion Kinematics
+    if (customModelGroup.visible && boyRigInstance) {
+      boyRigInstance.setSitting(isSitting);
+      boyRigInstance.setPraying(isPraying);
+      boyRigInstance.setHoldingHands(isHoldingHands);
+      boyRigInstance.updateAnimation(isWalking, time, moveSpeed);
       return;
     }
-
-    // 2. SOFA / FURNITURE SITTING (No body clipping, thighs flat on cushion, knees bent 90°)
+    // 1. SOFA / FURNITURE SITTING (No body clipping, thighs flat on cushion, knees bent 90°)
     if (isSitting) {
       const sitBreath = Math.sin(time * 2.0) * 0.008;
       pelvis.position.set(0, 0.46 + sitBreath, 0);
       pelvis.rotation.set(0, 0, 0);
 
       torso.rotation.set(-0.06, 0, 0); // Gentle resting recline against sofa backrest
-      head.rotation.set(0.04, isHoldingHands ? -0.08 : 0, 0); // Watching TV north & gentle glance at Sana
+      head.rotation.set(0.04, 0, 0); // Watching TV north
 
       // Thighs extend horizontally forward across cushion
       leftLeg.position.set(-0.14, -0.04, 0);
@@ -543,14 +437,9 @@ export function createAalekhCharacter(): CharacterRig {
       leftArm.rotation.set(0.45, 0.15, 0.2);
       leftElbow.rotation.set(0.65, 0, 0);
 
-      // Right Arm: clasped with Sana on center cushion or resting lovingly
-      if (isHoldingHands) {
-        rightArm.rotation.set(0.35, -0.25, -0.3);
-        rightElbow.rotation.set(0.45, 0, -0.15);
-      } else {
-        rightArm.rotation.set(0.45, -0.15, -0.2);
-        rightElbow.rotation.set(0.65, 0, 0);
-      }
+      // Right Arm: rests comfortably on thigh
+      rightArm.rotation.set(0.45, -0.15, -0.2);
+      rightElbow.rotation.set(0.65, 0, 0);
       return;
     }
 
@@ -608,22 +497,17 @@ export function createAalekhCharacter(): CharacterRig {
 
       // Spine & Torso Counter-Torsion
       torso.rotation.y = -Math.cos(walkPhase) * 0.04;
-      head.rotation.y = isHoldingHands ? -0.06 + Math.cos(walkPhase) * 0.02 : Math.cos(walkPhase) * 0.02;
+      head.rotation.y = Math.cos(walkPhase) * 0.02;
 
-      // Outer Left Arm: Swings naturally in opposition to left leg
-      leftArm.rotation.x = -leftThighAngle * 0.75;
-      leftElbow.rotation.x = 0.25 + Math.max(0, leftThighAngle) * 0.4;
+      // Left Arm: natural counter-stride swing
+      leftArm.rotation.x = -leftThighAngle * 0.70;
+      leftElbow.rotation.x = 0.22 + Math.max(0, leftThighAngle) * 0.35;
+      leftWrist.rotation.set(0, 0, 0);
 
-      // Inner Right Arm: Holding Hands with Sana!
-      if (isHoldingHands) {
-        // Hand stays clasped with Sana, swinging gently in lovey-dovey unison
-        const handSwing = Math.sin(walkPhase) * 0.12;
-        rightArm.rotation.set(0.12 + handSwing, -0.16, -0.22);
-        rightElbow.rotation.set(0.18, 0, -0.12);
-      } else {
-        rightArm.rotation.x = leftThighAngle * 0.75;
-        rightElbow.rotation.x = 0.25 + Math.max(0, -leftThighAngle) * 0.4;
-      }
+      // Right Arm: natural counter-stride swing
+      rightArm.rotation.x = leftThighAngle * 0.70;
+      rightElbow.rotation.x = 0.22 + Math.max(0, -leftThighAngle) * 0.35;
+      rightWrist.rotation.set(0, 0, 0);
     } else {
       // 5. NATURAL IDLE BREATHING & GROUNDED STANCE
       const breath = Math.sin(time * 2.2) * 0.012;
@@ -631,7 +515,7 @@ export function createAalekhCharacter(): CharacterRig {
       pelvis.rotation.set(0, 0, 0);
 
       torso.rotation.set(0, 0, 0);
-      head.rotation.set(0, isHoldingHands ? -0.06 : 0, isHoldingHands ? -0.015 : 0);
+      head.rotation.set(0, 0, 0);
 
       // Relaxed feet planted firmly on ground
       leftLeg.rotation.set(0, 0, 0);
@@ -641,17 +525,14 @@ export function createAalekhCharacter(): CharacterRig {
       leftAnkle.rotation.set(0, 0, 0);
       rightAnkle.rotation.set(0, 0, 0);
 
-      // Arms: relaxed at sides or holding hands
-      leftArm.rotation.set(0.05, 0, 0.06);
-      leftElbow.rotation.set(0.12, 0, 0);
+      // Arms: naturally relaxed beside body, slight elbow bend
+      leftArm.rotation.set(0.06, 0, 0.08);
+      leftElbow.rotation.set(0.14, 0, 0);
+      leftWrist.rotation.set(0, 0, 0);
 
-      if (isHoldingHands) {
-        rightArm.rotation.set(0.08, -0.14, -0.22);
-        rightElbow.rotation.set(0.16, 0, -0.10);
-      } else {
-        rightArm.rotation.set(0.05, 0, -0.06);
-        rightElbow.rotation.set(0.12, 0, 0);
-      }
+      rightArm.rotation.set(0.06, 0, -0.08);
+      rightElbow.rotation.set(0.14, 0, 0);
+      rightWrist.rotation.set(0, 0, 0);
     }
   };
 
@@ -670,7 +551,9 @@ export function createAalekhCharacter(): CharacterRig {
     rightElbow,
     head,
     torso,
-    isCustomModelActive,
+    get isCustomModelActive() {
+      return isCustomModelActive;
+    },
     setPraying,
     setSitting,
     setHoldingHands,
@@ -732,28 +615,27 @@ export function createShirjanaCharacter(): CharacterRig {
   const proceduralGroup = new THREE.Group();
   proceduralGroup.name = "proceduralSanaRig";
   root.add(proceduralGroup);
+  proceduralGroup.visible = true;
 
   const customModelGroup = new THREE.Group();
   customModelGroup.name = "customModelSanaGroup";
   customModelGroup.visible = false;
   root.add(customModelGroup);
 
-  // Primary Articulated Rig with Biomechanical Skeletal Kinematics & Flared Lehenga
-  proceduralGroup.visible = true;
-  customModelGroup.visible = false;
   let isCustomModelActive = false;
+  let girlRigInstance: Person2RigInstance | null = null;
 
-  let girlRig: RiggedHumanoidCharacter | null = null;
-  loadGirlRiggedCharacter()
+  // Load Person 2 (Girl / Sana) with GPU SkinnedMesh humanoid rig & active leg/arm articulation
+  loadGirlCharacterRig()
     .then((rig) => {
-      girlRig = rig;
+      girlRigInstance = rig;
       customModelGroup.add(rig.root);
       customModelGroup.visible = true;
       proceduralGroup.visible = false;
       isCustomModelActive = true;
     })
     .catch((err) => {
-      console.warn("Using procedural Sana fallback rig:", err);
+      console.warn("Could not load Sana SkinnedMesh rig, using procedural fallback:", err);
       proceduralGroup.visible = true;
       isCustomModelActive = false;
     });
@@ -981,8 +863,10 @@ export function createShirjanaCharacter(): CharacterRig {
 
   const leftArm = leftArmData.shoulderJoint;
   const leftElbow = leftArmData.elbowJoint;
+  const leftWrist = leftArmData.wrist;
   const rightArm = rightArmData.shoulderJoint;
   const rightElbow = rightArmData.elbowJoint;
+  const rightWrist = rightArmData.wrist;
 
   // -----------------------------------------------------------------------
   // LEGS WITH ARTICULATED KNEE JOINTS & FOOT ANKLES (Beneath flared lehenga)
@@ -1050,136 +934,37 @@ export function createShirjanaCharacter(): CharacterRig {
   const setPraying = (praying: boolean) => {
     isPraying = praying;
     if (praying) isSitting = false;
+    girlRigInstance?.setPraying(praying);
   };
 
   const setSitting = (sitting: boolean) => {
     isSitting = sitting;
     if (sitting) isPraying = false;
+    girlRigInstance?.setSitting(sitting);
   };
 
   const setHoldingHands = (holding: boolean) => {
     isHoldingHands = holding;
+    girlRigInstance?.setHoldingHands(holding);
   };
 
   const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
-    // 1. Skinned Humanoid 3D Girl Model Skeletal Animation (if active)
-    if (girlRig && customModelGroup.visible) {
-      if (isSitting) {
-        girlRig.bones.hips.position.set(0, 0.46, 0.12);
-        girlRig.bones.hips.rotation.set(0, 0, 0);
-        girlRig.bones.spine.rotation.set(-0.06, 0, 0);
-        girlRig.bones.head.rotation.set(0.04, isHoldingHands ? 0.08 : 0, 0);
-
-        girlRig.bones.leftThigh.rotation.set(-Math.PI / 2, 0, 0);
-        girlRig.bones.rightThigh.rotation.set(-Math.PI / 2, 0, 0);
-        girlRig.bones.leftKnee.rotation.set(Math.PI / 2, 0, 0);
-        girlRig.bones.rightKnee.rotation.set(Math.PI / 2, 0, 0);
-        girlRig.bones.leftAnkle.rotation.set(0, 0, 0);
-        girlRig.bones.rightAnkle.rotation.set(0, 0, 0);
-
-        if (isHoldingHands) {
-          girlRig.bones.leftUpperArm.rotation.set(0.32, 0.25, 0.28);
-          girlRig.bones.leftForearm.rotation.set(0.42, 0, 0.15);
-        } else {
-          girlRig.bones.leftUpperArm.rotation.set(0.35, 0.15, 0.2);
-          girlRig.bones.leftForearm.rotation.set(0.45, 0, 0);
-        }
-        girlRig.bones.rightUpperArm.rotation.set(0.35, -0.15, -0.2);
-        girlRig.bones.rightForearm.rotation.set(0.45, 0, 0);
-      } else if (isPraying) {
-        const prayBreath = Math.sin(time * 2.0) * 0.01;
-        girlRig.bones.hips.position.set(0, 0.50 * 1.65 + prayBreath, 0);
-        girlRig.bones.hips.rotation.set(0, 0, 0);
-        girlRig.bones.spine.rotation.set(0.12, 0, 0);
-        girlRig.bones.head.rotation.set(0.15, 0, 0);
-
-        girlRig.bones.leftThigh.rotation.set(0, 0, 0);
-        girlRig.bones.rightThigh.rotation.set(0, 0, 0);
-        girlRig.bones.leftKnee.rotation.set(0, 0, 0);
-        girlRig.bones.rightKnee.rotation.set(0, 0, 0);
-        girlRig.bones.leftAnkle.rotation.set(0, 0, 0);
-        girlRig.bones.rightAnkle.rotation.set(0, 0, 0);
-
-        girlRig.bones.leftUpperArm.rotation.set(0.85, 0.45, 0.35);
-        girlRig.bones.leftForearm.rotation.set(0.85, 0, 0);
-        girlRig.bones.rightUpperArm.rotation.set(0.85, -0.45, -0.35);
-        girlRig.bones.rightForearm.rotation.set(0.85, 0, 0);
-      } else if (isWalking) {
-        const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
-        walkPhase += 0.085 * strideSpeed;
-
-        const thighSwing = Math.sin(walkPhase) * 0.45;
-        const leftThighAngle = thighSwing;
-        const rightThighAngle = -thighSwing;
-
-        // Biomechanical Knee Flexion (Knees bend backwards dynamically!)
-        const leftKneeBend = Math.max(0, -Math.sin(walkPhase + 0.35)) * 0.68;
-        const rightKneeBend = Math.max(0, Math.sin(walkPhase + 0.35)) * 0.68;
-
-        girlRig.bones.leftThigh.rotation.x = leftThighAngle;
-        girlRig.bones.rightThigh.rotation.x = rightThighAngle;
-        girlRig.bones.leftKnee.rotation.x = leftKneeBend;
-        girlRig.bones.rightKnee.rotation.x = rightKneeBend;
-
-        girlRig.bones.leftAnkle.rotation.x = -(leftThighAngle + leftKneeBend) * 0.55;
-        girlRig.bones.rightAnkle.rotation.x = -(rightThighAngle + rightKneeBend) * 0.55;
-
-        const bounce = Math.abs(Math.sin(walkPhase * 2)) * 0.040;
-        girlRig.bones.hips.position.y = 0.50 * 1.65 + bounce;
-        girlRig.bones.hips.rotation.z = Math.sin(walkPhase) * 0.022;
-        girlRig.bones.spine.rotation.y = -Math.cos(walkPhase) * 0.035;
-        girlRig.bones.head.rotation.y = isHoldingHands ? 0.06 - Math.cos(walkPhase) * 0.02 : -Math.cos(walkPhase) * 0.02;
-
-        // Inner Left Arm Holding Hands with Aalekh!
-        if (isHoldingHands) {
-          const handSwing = Math.sin(walkPhase) * 0.12;
-          girlRig.bones.leftUpperArm.rotation.set(0.14 + handSwing, 0.22, 0.32);
-          girlRig.bones.leftForearm.rotation.set(0.24, 0, 0.16);
-        } else {
-          girlRig.bones.leftUpperArm.rotation.x = -leftThighAngle * 0.70;
-          girlRig.bones.leftForearm.rotation.x = 0.22 + Math.max(0, leftThighAngle) * 0.35;
-        }
-
-        // Outer Right Arm Swings with Graceful Momentum
-        girlRig.bones.rightUpperArm.rotation.x = leftThighAngle * 0.70;
-        girlRig.bones.rightForearm.rotation.x = 0.22 + Math.max(0, -leftThighAngle) * 0.35;
-      } else {
-        // Natural Idle
-        const breath = Math.sin(time * 2.4) * 0.012;
-        girlRig.bones.hips.position.set(0, 0.50 * 1.65 + breath, 0);
-        girlRig.bones.hips.rotation.set(0, 0, 0);
-        girlRig.bones.spine.rotation.set(0, 0, 0);
-        girlRig.bones.head.rotation.set(0, isHoldingHands ? 0.06 : 0, 0);
-
-        girlRig.bones.leftThigh.rotation.set(0, 0, 0);
-        girlRig.bones.rightThigh.rotation.set(0, 0, 0);
-        girlRig.bones.leftKnee.rotation.set(0, 0, 0);
-        girlRig.bones.rightKnee.rotation.set(0, 0, 0);
-        girlRig.bones.leftAnkle.rotation.set(0, 0, 0);
-        girlRig.bones.rightAnkle.rotation.set(0, 0, 0);
-
-        if (isHoldingHands) {
-          girlRig.bones.leftUpperArm.rotation.set(0.10, 0.20, 0.30);
-          girlRig.bones.leftForearm.rotation.set(0.22, 0, 0.14);
-        } else {
-          girlRig.bones.leftUpperArm.rotation.set(0.08, 0, 0.08);
-          girlRig.bones.leftForearm.rotation.set(0.12, 0, 0);
-        }
-
-        girlRig.bones.rightUpperArm.rotation.set(0.08, 0, -0.08);
-        girlRig.bones.rightForearm.rotation.set(0.12, 0, 0);
-      }
+    // 0. External Photorealistic 3D Model GPU SkinnedMesh Locomotion Kinematics
+    if (customModelGroup.visible && girlRigInstance) {
+      girlRigInstance.setSitting(isSitting);
+      girlRigInstance.setPraying(isPraying);
+      girlRigInstance.setHoldingHands(isHoldingHands);
+      girlRigInstance.updateAnimation(isWalking, time, moveSpeed);
       return;
     }
-
-    // 2. SOFA / FURNITURE SITTING (Beside Aalekh on the luxury sofa)
+    // 1. SOFA / FURNITURE SITTING (Beside Aalekh on the luxury sofa)
     if (isSitting) {
       const sitBreath = Math.sin(time * 2.0) * 0.008;
       pelvis.position.set(0, 0.46 + sitBreath, 0);
       pelvis.rotation.set(0, 0, 0);
 
       torso.rotation.set(-0.06, 0, 0);
-      head.rotation.set(0.04, isHoldingHands ? 0.08 : 0, 0); // Watching TV north & gentle glance at Aalekh
+      head.rotation.set(0.04, 0, 0); // Watching TV north
 
       lehengaGroup.rotation.set(0.35, 0, 0); // Flared lehenga settles gracefully on sofa seat
 
@@ -1194,14 +979,9 @@ export function createShirjanaCharacter(): CharacterRig {
       leftAnkle.rotation.set(0, 0, 0);
       rightAnkle.rotation.set(0, 0, 0);
 
-      // Inner Left Arm: clasped with Aalekh on center cushion
-      if (isHoldingHands) {
-        leftArm.rotation.set(0.35, 0.25, 0.3);
-        leftElbow.rotation.set(0.45, 0, 0.15);
-      } else {
-        leftArm.rotation.set(0.45, 0.15, 0.2);
-        leftElbow.rotation.set(0.65, 0, 0);
-      }
+      // Left Arm: rests gracefully on lap/thigh
+      leftArm.rotation.set(0.45, 0.15, 0.2);
+      leftElbow.rotation.set(0.65, 0, 0);
 
       // Outer Right Arm: rests gracefully on lap/thigh
       rightArm.rotation.set(0.45, -0.15, -0.2);
@@ -1263,21 +1043,17 @@ export function createShirjanaCharacter(): CharacterRig {
       pelvis.rotation.y = Math.cos(walkPhase) * 0.030;
 
       torso.rotation.y = -Math.cos(walkPhase) * 0.035;
-      head.rotation.y = isHoldingHands ? 0.06 - Math.cos(walkPhase) * 0.02 : -Math.cos(walkPhase) * 0.02;
+      head.rotation.y = -Math.cos(walkPhase) * 0.02;
 
-      // Inner Left Arm: Holding Hands with Aalekh!
-      if (isHoldingHands) {
-        const handSwing = Math.sin(walkPhase) * 0.12;
-        leftArm.rotation.set(0.12 + handSwing, 0.16, 0.22);
-        leftElbow.rotation.set(0.18, 0, 0.12);
-      } else {
-        leftArm.rotation.x = -leftThighAngle * 0.70;
-        leftElbow.rotation.x = 0.22 + Math.max(0, leftThighAngle) * 0.35;
-      }
+      // Left Arm: natural counter-stride swing
+      leftArm.rotation.x = -leftThighAngle * 0.70;
+      leftElbow.rotation.x = 0.22 + Math.max(0, leftThighAngle) * 0.35;
+      leftWrist.rotation.set(0, 0, 0);
 
-      // Outer Right Arm: Swings naturally in opposition to leg
+      // Right Arm: natural counter-stride swing
       rightArm.rotation.x = leftThighAngle * 0.70;
       rightElbow.rotation.x = 0.22 + Math.max(0, -leftThighAngle) * 0.35;
+      rightWrist.rotation.set(0, 0, 0);
     } else {
       // 5. NATURAL IDLE BREATHING & GROUNDED STANCE
       const breath = Math.sin(time * 2.4) * 0.012;
@@ -1286,7 +1062,7 @@ export function createShirjanaCharacter(): CharacterRig {
       lehengaGroup.rotation.z = 0;
 
       torso.rotation.set(0, 0, 0);
-      head.rotation.set(0, isHoldingHands ? 0.06 : 0, isHoldingHands ? 0.015 : 0);
+      head.rotation.set(0, 0, 0);
 
       leftLeg.rotation.set(0, 0, 0);
       rightLeg.rotation.set(0, 0, 0);
@@ -1295,16 +1071,14 @@ export function createShirjanaCharacter(): CharacterRig {
       leftAnkle.rotation.set(0, 0, 0);
       rightAnkle.rotation.set(0, 0, 0);
 
-      if (isHoldingHands) {
-        leftArm.rotation.set(0.08, 0.14, 0.22);
-        leftElbow.rotation.set(0.16, 0, 0.10);
-      } else {
-        leftArm.rotation.set(0.04, 0, 0.05);
-        leftElbow.rotation.set(0.12, 0, 0);
-      }
+      // Arms: naturally relaxed beside body, slight elbow bend
+      rightArm.rotation.set(0.06, 0, -0.08);
+      rightElbow.rotation.set(0.14, 0, 0);
+      rightWrist.rotation.set(0, 0, 0);
 
-      rightArm.rotation.set(0.04, 0, -0.05);
-      rightElbow.rotation.set(0.12, 0, 0);
+      leftArm.rotation.set(0.06, 0, 0.08);
+      leftElbow.rotation.set(0.14, 0, 0);
+      leftWrist.rotation.set(0, 0, 0);
     }
   };
 
@@ -1323,130 +1097,12 @@ export function createShirjanaCharacter(): CharacterRig {
     rightElbow,
     head,
     torso,
-    isCustomModelActive,
+    get isCustomModelActive() {
+      return isCustomModelActive;
+    },
     setPraying,
     setSitting,
     setHoldingHands,
     updateAnimation,
   };
-}
-
-// =========================================================================
-// 3. UPGRADED BUNNY COMPANION: Chubby rounded body, floppy ears & hopping dynamics
-// =========================================================================
-export function createBunnyCompanion(): BunnyRig {
-  const root = new THREE.Group();
-  root.name = "bunnyCompanion";
-
-  const furMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.85,
-    metalness: 0.05,
-  });
-
-  const innerEarMat = new THREE.MeshStandardMaterial({
-    color: 0xfbcfe8, // Soft pink inner ear
-    roughness: 0.6,
-  });
-
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x831843 }); // Deep ruby eyes
-  const noseMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
-
-  // Body: chubby rounded teardrop shape
-  const bodyGeo = new THREE.SphereGeometry(0.32, 16, 16);
-  bodyGeo.scale(0.85, 0.9, 1.15);
-  const body = new THREE.Mesh(bodyGeo, furMat);
-  body.position.y = 0.28;
-  body.castShadow = true;
-  root.add(body);
-
-  // Head: cute rounded cranium
-  const headGeo = new THREE.SphereGeometry(0.22, 14, 14);
-  headGeo.scale(1.0, 1.05, 1.0);
-  const head = new THREE.Mesh(headGeo, furMat);
-  head.position.set(0, 0.44, 0.22);
-  head.castShadow = true;
-  root.add(head);
-
-  // Left & Right Floppy Ears
-  const earGeo = new THREE.CylinderGeometry(0.055, 0.035, 0.38, 8);
-  earGeo.scale(1.0, 1.0, 0.5);
-
-  const leftEar = new THREE.Mesh(earGeo, furMat);
-  leftEar.position.set(-0.11, 0.62, 0.16);
-  leftEar.rotation.set(-0.35, 0, -0.25);
-  root.add(leftEar);
-
-  const rightEar = new THREE.Mesh(earGeo, furMat);
-  rightEar.position.set(0.11, 0.62, 0.16);
-  rightEar.rotation.set(-0.35, 0, 0.25);
-  root.add(rightEar);
-
-  // Inner pink ear insets
-  const inEarGeo = new THREE.CylinderGeometry(0.035, 0.02, 0.32, 6);
-  inEarGeo.scale(1.0, 1.0, 0.4);
-  const inEarL = new THREE.Mesh(inEarGeo, innerEarMat);
-  inEarL.position.set(0, 0, 0.02);
-  leftEar.add(inEarL);
-
-  const inEarR = new THREE.Mesh(inEarGeo, innerEarMat);
-  inEarR.position.set(0, 0, 0.02);
-  rightEar.add(inEarR);
-
-  // Eyes
-  [-0.09, 0.09].forEach((ex) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), eyeMat);
-    eye.position.set(ex, 0.48, 0.38);
-    root.add(eye);
-  });
-
-  // Nose
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), noseMat);
-  nose.position.set(0, 0.42, 0.44);
-  root.add(nose);
-
-  // Puffy Tail
-  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10), furMat);
-  tail.position.set(0, 0.32, -0.32);
-  root.add(tail);
-
-  // Front Paws
-  [-0.1, 0.1].forEach((px) => {
-    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), furMat);
-    paw.scale.set(0.8, 0.6, 1.2);
-    paw.position.set(px, 0.05, 0.22);
-    root.add(paw);
-  });
-
-  // Back Feet
-  [-0.16, 0.16].forEach((bx) => {
-    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), furMat);
-    foot.scale.set(0.85, 0.5, 1.4);
-    foot.position.set(bx, 0.05, -0.06);
-    root.add(foot);
-  });
-
-  let hopPhase = 0;
-
-  const updateAnimation = (isWalking: boolean, time: number) => {
-    if (isWalking) {
-      hopPhase += 0.22;
-      const hop = Math.abs(Math.sin(hopPhase)) * 0.18;
-      root.position.y = hop;
-      root.rotation.x = -Math.sin(hopPhase) * 0.18;
-
-      // Floppy ear bounce
-      leftEar.rotation.x = -0.35 + Math.sin(hopPhase) * 0.25;
-      rightEar.rotation.x = -0.35 + Math.sin(hopPhase) * 0.25;
-    } else {
-      // Idle twitching & breathing
-      const breath = Math.sin(time * 3.5) * 0.015;
-      root.position.y = breath;
-      root.rotation.x = 0;
-      leftEar.rotation.x = -0.35 + Math.sin(time * 4) * 0.08;
-      rightEar.rotation.x = -0.35 + Math.cos(time * 3.5) * 0.08;
-    }
-  };
-
-  return { root, leftEar, rightEar, updateAnimation };
 }

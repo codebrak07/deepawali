@@ -1,67 +1,69 @@
 import * as THREE from "three";
 import { LOCALITY_BUILDINGS, BuildingPlot } from "./LocalityData";
+import {
+  getJaliLatticeTexture,
+  createInteractiveHaveliGate,
+  InteractiveHaveliGate,
+} from "./HaveliGateSystem";
 
-export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
+export interface LocalityBuildingsResult {
+  group: THREE.Group;
+  interactiveGates: InteractiveHaveliGate[];
+}
+
+export function createLocalityBuildings(scene: THREE.Scene): LocalityBuildingsResult {
   const buildingsGroup = new THREE.Group();
   buildingsGroup.name = "localityBuildingsGroup";
 
-  // Palette of warm, glowing window emissions
-  const windowEmissiveColors = [0xfef08a, 0xfde047, 0xf59e0b, 0xfbcfe8, 0xe0f2fe];
+  const interactiveGates: InteractiveHaveliGate[] = [];
 
-  // Reusable Shared Materials
+  // Authentic Shared Materials
   const plinthMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.9 });
-  const trimMat = new THREE.MeshStandardMaterial({ color: 0xe4e4e7, roughness: 0.5 });
-  const railingMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.8, roughness: 0.3 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xfafaf9, roughness: 0.5 }); // Crisp white Indian stucco mouldings
+  const railingMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.85, roughness: 0.25 }); // Wrought iron black railing
   const doorWoodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.6 });
-  const marigoldMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xd97706, emissiveIntensity: 0.6 });
+  const marigoldMat = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xd97706, emissiveIntensity: 0.65 });
   const waterTankMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
-  const streamerMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
   const potMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.8 });
   const foliageMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
   const diyaClayMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.7 });
   const diyaFlameMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+  // Jali Latticework Window Material (Authentic Glowing Indian Star Fretwork)
+  const jaliTex = getJaliLatticeTexture();
+  const jaliWindowMat = new THREE.MeshStandardMaterial({
+    map: jaliTex,
+    emissiveMap: jaliTex,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 1.35,
+    roughness: 0.35,
+    metalness: 0.1,
+  });
+
   const cyanMedicalMat = new THREE.MeshStandardMaterial({
     color: 0x38bdf8,
     emissive: 0x0284c7,
     emissiveIntensity: 1.2,
   });
-  const lanternMat = new THREE.MeshStandardMaterial({
-    color: 0xf59e0b,
-    emissive: 0xf97316,
-    emissiveIntensity: 1.2,
-  });
-
-  // Reusable Window Materials for each emission color (zero per-window allocations)
-  const sharedWindowMats = windowEmissiveColors.map(
-    (col) =>
-      new THREE.MeshStandardMaterial({
-        color: 0xffedd5,
-        emissive: col,
-        emissiveIntensity: 1.1,
-        roughness: 0.2,
-      })
-  );
 
   // Fairy light colors for rooflines & balconies
   const fairyPalette = [0xf59e0b, 0xec4899, 0x10b981, 0x06b6d4, 0xf43f5e, 0xfef08a];
   const sharedFairyMats = fairyPalette.map((col) => new THREE.MeshBasicMaterial({ color: col }));
 
-  // Reusable Shared Geometries (zero per-building duplicate allocations)
+  // Reusable Shared Geometries
   const sharedStepGeo = new THREE.BoxGeometry(2.4, 0.18, 0.8);
   const sharedMumtyGeo = new THREE.BoxGeometry(2.8, 2.4, 3.0);
   const sharedTankGeo = new THREE.CylinderGeometry(0.85, 0.85, 1.5, 10);
   const sharedDoorGeo = new THREE.PlaneGeometry(1.6, 2.3);
   const sharedWinGeo = new THREE.PlaneGeometry(1.25, 1.6);
-  const sharedChhajjaGeo = new THREE.BoxGeometry(1.5, 0.12, 0.45);
-  const sharedSillGeo = new THREE.BoxGeometry(1.4, 0.08, 0.25);
-  const sharedTasselGeo = new THREE.ConeGeometry(0.07, 0.28, 4);
-  const sharedBulbGeo = new THREE.SphereGeometry(0.09, 4, 4);
-  const sharedOctaGeo = new THREE.OctahedronGeometry(0.42, 0);
-  const sharedStreamerGeo = new THREE.ConeGeometry(0.08, 0.6, 4);
+  const sharedWinFrameGeo = new THREE.BoxGeometry(1.5, 1.85, 0.12);
+  const sharedChhajjaGeo = new THREE.BoxGeometry(1.6, 0.14, 0.45);
+  const sharedSillGeo = new THREE.BoxGeometry(1.5, 0.10, 0.28);
+  const sharedBulbGeo = new THREE.SphereGeometry(0.08, 4, 4);
   const sharedPotGeo = new THREE.CylinderGeometry(0.25, 0.18, 0.45, 6);
   const sharedFoliageGeo = new THREE.SphereGeometry(0.32, 6, 6);
-  const sharedDiyaGeo = new THREE.CylinderGeometry(0.2, 0.1, 0.1, 6);
-  const sharedFlameGeo = new THREE.ConeGeometry(0.08, 0.22, 5);
+  const sharedDiyaGeo = new THREE.CylinderGeometry(0.12, 0.07, 0.07, 8);
+  const sharedFlameGeo = new THREE.ConeGeometry(0.05, 0.15, 6);
 
   LOCALITY_BUILDINGS.forEach((plot: BuildingPlot, bIdx: number) => {
     // Shiva Temple, Hanuman Temple and Sana's Home are custom rendered enterable architectural suites
@@ -101,10 +103,10 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
     bodyMesh.receiveShadow = true;
     bldgGroup.add(bodyMesh);
 
-    // 3. Horizontal String Courses / Floor Dividing Ledges
+    // 3. Bold White Horizontal Stringcourses (Floor dividing ledges matching reference)
     for (let f = 1; f < plot.floors; f++) {
       const ledgeY = plinthHeight + f * floorHeight;
-      const ledgeGeo = new THREE.BoxGeometry(plot.width + 0.35, 0.18, plot.depth + 0.35);
+      const ledgeGeo = new THREE.BoxGeometry(plot.width + 0.35, 0.22, plot.depth + 0.35);
       const ledgeMesh = new THREE.Mesh(ledgeGeo, trimMat);
       ledgeMesh.position.y = ledgeY;
       bldgGroup.add(ledgeMesh);
@@ -147,13 +149,11 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
       shikharaMesh.rotation.y = Math.PI / 4;
       bldgGroup.add(shikharaMesh);
 
-      // Temple Golden Kalash finial
       const kalashGeo = new THREE.SphereGeometry(0.5, 12, 12);
       const kalashMesh = new THREE.Mesh(kalashGeo, shikharaMat);
       kalashMesh.position.set(0, plinthHeight + plot.height + 5.7, 0);
       bldgGroup.add(kalashMesh);
 
-      // Saffron Pataka Flag
       const flagGeo = new THREE.ConeGeometry(0.35, 1.4, 3);
       const flagMat = new THREE.MeshBasicMaterial({ color: 0xea580c });
       const flagMesh = new THREE.Mesh(flagGeo, flagMat);
@@ -161,7 +161,7 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
       bldgGroup.add(flagMesh);
     }
 
-    // 6. Warmly Glowing Windows with Chhajja Sunshades & Frames
+    // 6. Glowing Latticework Jali Windows with Stone Architraves & Sill Diyas
     const windowsPerRow = Math.max(2, Math.floor(plot.width / 3.4));
     for (let f = 0; f < plot.floors; f++) {
       const floorY = plinthHeight + (f + 0.55) * floorHeight;
@@ -171,38 +171,51 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
         if (f === 0 && w === Math.floor(windowsPerRow / 2)) continue;
 
         const winX = ((w + 0.5) / windowsPerRow - 0.5) * (plot.width * 0.78);
-        const winMat = sharedWindowMats[(bIdx + f + w) % sharedWindowMats.length];
 
-        // Window Glass Pane
-        const winMesh = new THREE.Mesh(sharedWinGeo, winMat);
-        winMesh.position.set(winX, floorY, plot.depth / 2 + 0.02);
+        // Intricate Jali Window Pane with Radiant Golden Glow
+        const winMesh = new THREE.Mesh(sharedWinGeo, jaliWindowMat);
+        winMesh.position.set(winX, floorY, plot.depth / 2 + 0.05);
         bldgGroup.add(winMesh);
 
-        // Window Sunshade (Chhajja ledge)
+        // Molded White Architrave Frame
+        const frameMesh = new THREE.Mesh(sharedWinFrameGeo, trimMat);
+        frameMesh.position.set(winX, floorY, plot.depth / 2 + 0.03);
+        bldgGroup.add(frameMesh);
+
+        // Window Sunshade (Chhajja Ledge)
         const chhajjaMesh = new THREE.Mesh(sharedChhajjaGeo, trimMat);
-        chhajjaMesh.position.set(winX, floorY + 0.9, plot.depth / 2 + 0.23);
+        chhajjaMesh.position.set(winX, floorY + 0.95, plot.depth / 2 + 0.24);
         bldgGroup.add(chhajjaMesh);
 
         // Window Sill
         const sillMesh = new THREE.Mesh(sharedSillGeo, trimMat);
-        sillMesh.position.set(winX, floorY - 0.85, plot.depth / 2 + 0.14);
+        sillMesh.position.set(winX, floorY - 0.90, plot.depth / 2 + 0.16);
         bldgGroup.add(sillMesh);
+
+        // Glowing Clay Diya on Window Sill!
+        const sillDiya = new THREE.Mesh(sharedDiyaGeo, diyaClayMat);
+        sillDiya.position.set(winX, floorY - 0.82, plot.depth / 2 + 0.22);
+        bldgGroup.add(sillDiya);
+
+        const sillFlame = new THREE.Mesh(sharedFlameGeo, diyaFlameMat);
+        sillFlame.position.set(winX, floorY - 0.72, plot.depth / 2 + 0.22);
+        bldgGroup.add(sillFlame);
       }
     }
 
-    // 7. Overhanging Balconies with Railings on Upper Floors
+    // 7. Cantilevered Balconies with Glowing Clay Diyas Along the Railing! (Matches Reference)
     if (plot.hasBalcony && plot.floors > 1) {
       for (let f = 1; f < plot.floors; f++) {
         const balconyY = plinthHeight + f * floorHeight;
         const balcWidth = plot.width * 0.6;
 
-        // Balcony Concrete Slab
+        // Molded White Balcony Slab
         const slabGeo = new THREE.BoxGeometry(balcWidth, 0.25, 1.7);
         const slabMesh = new THREE.Mesh(slabGeo, trimMat);
         slabMesh.position.set(0, balconyY, plot.depth / 2 + 0.85);
         bldgGroup.add(slabMesh);
 
-        // Front Railing
+        // Front Black Wrought-Iron Railing
         const frontRailGeo = new THREE.BoxGeometry(balcWidth, 0.85, 0.06);
         const frontRail = new THREE.Mesh(frontRailGeo, railingMat);
         frontRail.position.set(0, balconyY + 0.45, plot.depth / 2 + 1.67);
@@ -218,41 +231,60 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
         rightRail.position.set(balcWidth / 2, balconyY + 0.45, plot.depth / 2 + 0.85);
         bldgGroup.add(rightRail);
 
-        // String of Colorful Fairy Lights along the Balcony Railing!
-        const fairyBulbCount = 8;
-        for (let fb = 0; fb < fairyBulbCount; fb++) {
-          const bulbX = ((fb + 0.5) / fairyBulbCount - 0.5) * (balcWidth * 0.9);
-          const bulbMat = sharedFairyMats[(bIdx + fb) % sharedFairyMats.length];
-          const bulbMesh = new THREE.Mesh(sharedBulbGeo, bulbMat);
-          bulbMesh.position.set(bulbX, balconyY + 0.88, plot.depth / 2 + 1.7);
-          bldgGroup.add(bulbMesh);
+        // Authentic Glowing Balcony Clay Diyas along the top railing!
+        const balconyDiyaCount = Math.max(4, Math.floor(balcWidth * 1.5));
+        for (let bd = 0; bd < balconyDiyaCount; bd++) {
+          const diyaX = ((bd + 0.5) / balconyDiyaCount - 0.5) * (balcWidth * 0.92);
+
+          const diya = new THREE.Mesh(sharedDiyaGeo, diyaClayMat);
+          diya.position.set(diyaX, balconyY + 0.92, plot.depth / 2 + 1.67);
+          bldgGroup.add(diya);
+
+          const flame = new THREE.Mesh(sharedFlameGeo, diyaFlameMat);
+          flame.position.set(diyaX, balconyY + 1.02, plot.depth / 2 + 1.67);
+          bldgGroup.add(flame);
         }
       }
     }
 
-    // 8. Ground Floor Entrance Doorway & Festive Details
-    const doorMesh = new THREE.Mesh(sharedDoorGeo, doorWoodMat);
-    doorMesh.position.set(0, plinthHeight + 1.15, plot.depth / 2 + 0.03);
-    bldgGroup.add(doorMesh);
+    // 8. Ground Floor Entrance: Interactive Haveli Double Gate
+    if (plot.type === "residential") {
+      const gate = createInteractiveHaveliGate({
+        id: `gate-${plot.id}`,
+        name: `${plot.name} Haveli Gate`,
+        position: new THREE.Vector3(0, plinthHeight, plot.depth / 2 + 0.05),
+        rotationY: 0,
+        width: 2.6,
+        height: 2.7,
+        hasToran: true,
+      });
+      bldgGroup.add(gate.root);
+      interactiveGates.push(gate);
+    } else {
+      // Commercial / Hospital Entrance Door
+      const doorMesh = new THREE.Mesh(sharedDoorGeo, doorWoodMat);
+      doorMesh.position.set(0, plinthHeight + 1.15, plot.depth / 2 + 0.03);
+      bldgGroup.add(doorMesh);
 
-    // Warm Doorway Glowing Sconce
-    const sconceMesh = new THREE.Mesh(
-      sharedBulbGeo,
-      new THREE.MeshBasicMaterial({ color: 0xfef08a })
-    );
-    sconceMesh.position.set(0, plinthHeight + 2.5, plot.depth / 2 + 0.2);
-    sconceMesh.scale.set(1.8, 1.8, 1.8);
-    bldgGroup.add(sconceMesh);
+      // Warm Doorway Glowing Sconce
+      const sconceMesh = new THREE.Mesh(
+        sharedBulbGeo,
+        new THREE.MeshBasicMaterial({ color: 0xfef08a })
+      );
+      sconceMesh.position.set(0, plinthHeight + 2.5, plot.depth / 2 + 0.2);
+      sconceMesh.scale.set(1.8, 1.8, 1.8);
+      bldgGroup.add(sconceMesh);
 
-    // Threshold Entrance Clay Diyas
-    [-1.5, 1.5].forEach((dx) => {
-      const diya = new THREE.Mesh(sharedDiyaGeo, diyaClayMat);
-      diya.position.set(dx, 0.15, plot.depth / 2 + 0.55);
-      bldgGroup.add(diya);
-      const flame = new THREE.Mesh(sharedFlameGeo, diyaFlameMat);
-      flame.position.set(dx, 0.25, plot.depth / 2 + 0.55);
-      bldgGroup.add(flame);
-    });
+      // Entrance Diyas
+      [-1.5, 1.5].forEach((dx) => {
+        const diya = new THREE.Mesh(sharedDiyaGeo, diyaClayMat);
+        diya.position.set(dx, 0.15, plot.depth / 2 + 0.55);
+        bldgGroup.add(diya);
+        const flame = new THREE.Mesh(sharedFlameGeo, diyaFlameMat);
+        flame.position.set(dx, 0.25, plot.depth / 2 + 0.55);
+        bldgGroup.add(flame);
+      });
+    }
 
     // Decorative Plinth Flower Planters
     [-plot.width * 0.42, plot.width * 0.42].forEach((px) => {
@@ -264,63 +296,19 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
       bldgGroup.add(foliage);
     });
 
-    // Side Windows (finished architecture visible from courtyards & alleys)
+    // Side Jali Windows
     for (let f = 0; f < plot.floors; f++) {
       const floorY = plinthHeight + (f + 0.55) * floorHeight;
-      const sideMat = sharedWindowMats[(bIdx + f + 2) % sharedWindowMats.length];
 
-      const leftWin = new THREE.Mesh(sharedWinGeo, sideMat);
+      const leftWin = new THREE.Mesh(sharedWinGeo, jaliWindowMat);
       leftWin.rotation.y = -Math.PI / 2;
       leftWin.position.set(-plot.width / 2 - 0.02, floorY, 0);
       bldgGroup.add(leftWin);
 
-      const rightWin = new THREE.Mesh(sharedWinGeo, sideMat);
+      const rightWin = new THREE.Mesh(sharedWinGeo, jaliWindowMat);
       rightWin.rotation.y = Math.PI / 2;
       rightWin.position.set(plot.width / 2 + 0.02, floorY, 0);
       bldgGroup.add(rightWin);
-    }
-
-    // Marigold Toran Garland across the doorframe
-    if (plot.hasToran) {
-      const toranGeo = new THREE.BoxGeometry(2.0, 0.16, 0.1);
-      const toranMesh = new THREE.Mesh(toranGeo, marigoldMat);
-      toranMesh.position.set(0, plinthHeight + 2.52, plot.depth / 2 + 0.08);
-      bldgGroup.add(toranMesh);
-
-      // Hanging Marigold Tassels
-      for (let t = -0.8; t <= 0.8; t += 0.4) {
-        const tassel = new THREE.Mesh(sharedTasselGeo, marigoldMat);
-        tassel.rotation.x = Math.PI;
-        tassel.position.set(t, plinthHeight + 2.34, plot.depth / 2 + 0.08);
-        bldgGroup.add(tassel);
-      }
-    }
-
-    // 9. Roof-Edge Fairy Lights along the entire building facade!
-    const roofBulbCount = Math.floor(plot.width * 2.2);
-    for (let rb = 0; rb < roofBulbCount; rb++) {
-      const bulbX = ((rb + 0.5) / roofBulbCount - 0.5) * plot.width;
-      const bulbMat = sharedFairyMats[(bIdx * 2 + rb) % sharedFairyMats.length];
-      const bulbMesh = new THREE.Mesh(sharedBulbGeo, bulbMat);
-      bulbMesh.position.set(bulbX, plinthHeight + plot.height + 0.15, plot.depth / 2 + 0.15);
-      bldgGroup.add(bulbMesh);
-    }
-
-    // Cascading Golden Waterfall Lights on residential facades
-    if (bIdx % 2 === 0 && plot.height > 6) {
-      const curtainStrings = 4;
-      for (let cs = 0; cs < curtainStrings; cs++) {
-        const cx = ((cs + 0.5) / curtainStrings - 0.5) * (plot.width * 0.85);
-        const dropCount = Math.floor(plot.height * 1.5);
-        for (let d = 0; d < dropCount; d++) {
-          const dy = plinthHeight + plot.height - d * 0.7;
-          if (dy <= plinthHeight + 0.8) continue;
-          const bMat = sharedFairyMats[(bIdx + cs + d) % sharedFairyMats.length];
-          const bMesh = new THREE.Mesh(sharedBulbGeo, bMat);
-          bMesh.position.set(cx, dy, plot.depth / 2 + 0.1);
-          bldgGroup.add(bMesh);
-        }
-      }
     }
 
     // Sai Hospital Cyan Medical Cross Glow
@@ -334,39 +322,9 @@ export function createLocalityBuildings(scene: THREE.Scene): THREE.Group {
       bldgGroup.add(crossV);
     }
 
-    // 10. Hanging Akash Kandil Lantern from Upper Floor / Balcony
-    const lanternGroup = new THREE.Group();
-    lanternGroup.position.set(plot.width * 0.35, plinthHeight + plot.height - 1.2, plot.depth / 2 + 0.6);
-
-    const lCore = new THREE.Mesh(sharedOctaGeo, lanternMat);
-    lanternGroup.add(lCore);
-
-    // Lantern tassels
-    for (let st = -0.18; st <= 0.18; st += 0.18) {
-      const s = new THREE.Mesh(sharedStreamerGeo, streamerMat);
-      s.position.set(st, -0.6, 0);
-      lanternGroup.add(s);
-    }
-
-    bldgGroup.add(lanternGroup);
-
-    // 11. Signboard for Hospital, Temple, Sweet Shop
-    if (plot.type === "hospital" || plot.type === "sweet-shop" || plot.type === "temple") {
-      const signBoard = new THREE.Mesh(
-        new THREE.BoxGeometry(plot.width * 0.75, 0.85, 0.15),
-        new THREE.MeshStandardMaterial({
-          color: plot.type === "hospital" ? 0x0284c7 : plot.type === "temple" ? 0xea580c : 0xbe123c,
-          emissive: plot.type === "hospital" ? 0x0369a1 : plot.type === "temple" ? 0xc2410c : 0x881337,
-          emissiveIntensity: 0.6,
-        })
-      );
-      signBoard.position.set(0, plinthHeight + floorHeight + 0.45, plot.depth / 2 + 0.15);
-      bldgGroup.add(signBoard);
-    }
-
     buildingsGroup.add(bldgGroup);
   });
 
   scene.add(buildingsGroup);
-  return buildingsGroup;
+  return { group: buildingsGroup, interactiveGates };
 }
