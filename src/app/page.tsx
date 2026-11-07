@@ -58,11 +58,11 @@ export default function Page() {
 
     engine.onPlayerTransformChange = (pos, heading) => {
       const now = performance.now();
-      // Throttle minimap and spatial state updates to 12.5Hz (80ms) and skip redundant updates when stationary
-      if (now - lastTransformTime > 80) {
+      // Smooth minimap tracking at 25Hz (40ms) with responsive heading orientation
+      if (now - lastTransformTime > 40) {
         const dMove = Math.hypot(pos.x - lastSentX, pos.z - lastSentZ);
         const dRot = Math.abs(heading - lastSentHeading);
-        if (dMove > 0.04 || dRot > 0.02) {
+        if (dMove > 0.02 || dRot > 0.01) {
           lastTransformTime = now;
           lastSentX = pos.x;
           lastSentZ = pos.z;

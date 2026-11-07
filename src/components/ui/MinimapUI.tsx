@@ -37,8 +37,8 @@ export function MinimapUI({
   isInsideTemple = false,
   isInsideHanuman = false,
 }: MinimapUIProps) {
-  // Map mode: "rotating" (player faces up) vs "north-up" (geographical north up)
-  const [mapMode, setMapMode] = useState<"rotating" | "north-up">("rotating");
+  // Map mode: "north-up" (geographical north up, arrow points in movement direction) vs "rotating"
+  const [mapMode, setMapMode] = useState<"rotating" | "north-up">("north-up");
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
@@ -57,7 +57,11 @@ export function MinimapUI({
 
   const playerSvgX = toSvgX(playerPos.x);
   const playerSvgY = toSvgY(playerPos.z);
-  const playerDegrees = (playerHeading * 180) / Math.PI;
+  // Heading in SVG coordinates:
+  // Three.js: charRotation = PI when facing North (-Z), PI/2 when facing East (+X), 0 when facing South (+Z), -PI/2 when facing West (-X)
+  // In SVG: 0 deg points UP (North, -Z), 90 deg points RIGHT (East, +X), 180 deg points DOWN (South, +Z), 270 deg points LEFT (West, -X)
+  const headingAngleRad = Math.PI - playerHeading;
+  const playerDegrees = ((headingAngleRad * 180) / Math.PI + 360) % 360;
 
   // Circular HUD View Radius (42 SVG units = ~42m radius around player, GTA-style centered tracking)
   const hudRadius = 42;
