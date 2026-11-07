@@ -1171,7 +1171,7 @@ export function createSanaHomeInterior(): InteriorSceneObjects {
 
   const chandelierLight = new THREE.PointLight(0xfef3c7, 3.8, 24.0, 1.1);
   chandelierLight.position.set(livingCx, height - 1.4, livingCz);
-  chandelierLight.castShadow = true;
+  chandelierLight.castShadow = false;
   group.add(chandelierLight);
 
   // Upper Floor Chandelier Light

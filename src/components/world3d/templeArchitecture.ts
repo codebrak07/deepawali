@@ -457,7 +457,7 @@ export function buildShivaTempleArchitecture(
   // -------------------------------------------------------------------------
   const sanctumGlow = new THREE.PointLight(0xf59e0b, 3.5, 14.0, 1.4);
   sanctumGlow.position.set(shivlingPos.x, 2.2, shivlingPos.z);
-  sanctumGlow.castShadow = true;
+  sanctumGlow.castShadow = false;
   interiorGroup.add(sanctumGlow);
 
   // Akhand Brass Deepastambha with Flickering Flame
@@ -821,7 +821,7 @@ export function buildHanumanTempleArchitecture(
   // Golden Sanctum Lighting
   const sanctumGlow = new THREE.PointLight(0xf97316, 3.8, 14.0, 1.2);
   sanctumGlow.position.set(murtiPos.x, 2.4, murtiPos.z + 0.8);
-  sanctumGlow.castShadow = true;
+  sanctumGlow.castShadow = false;
   interiorGroup.add(sanctumGlow);
 
   // Murti Collider

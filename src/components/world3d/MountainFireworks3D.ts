@@ -101,11 +101,11 @@ export function createMountainFireworksDestination(): MountainDestination {
   });
 
   // =========================================================================
-  // 1. MOUNTAIN ROCK TERRACES (Flat plateau top kept below summit deck!)
+  // 1. MOUNTAIN ROCK TERRACES (Flat plateau top kept strictly below summit deck)
   // =========================================================================
-  const mountainBaseGeo = new THREE.CylinderGeometry(14, 38, summitY, 16);
+  const mountainBaseGeo = new THREE.CylinderGeometry(13.2, 38, summitY - 0.6, 16);
   const mountainBase = new THREE.Mesh(mountainBaseGeo, rockMat);
-  mountainBase.position.set(mx, summitY / 2, mz);
+  mountainBase.position.set(mx, (summitY - 0.6) / 2, mz);
   mountainBase.receiveShadow = true;
   group.add(mountainBase);
 
@@ -229,37 +229,37 @@ export function createMountainFireworksDestination(): MountainDestination {
   benchGroup.position.set(benchX, benchY, benchZ);
   benchGroup.rotation.y = benchRotation;
 
-  // Solid Teak Seat Base (surface at y = 0.42m)
-  const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.10, 0.75), woodMat);
-  benchSeat.position.y = 0.37;
+  // Solid Teak Seat Base (surface at y = 0.38m, depth 0.42m)
+  const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.08, 0.42), woodMat);
+  benchSeat.position.set(0, 0.34, -0.01);
   benchSeat.castShadow = true;
   benchGroup.add(benchSeat);
 
-  // Deep Crimson Velvet Cushion (top sitting surface at y = 0.48m)
-  const benchCushion = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 0.70), cushionMat);
-  benchCushion.position.y = 0.45;
+  // Deep Crimson Velvet Cushion (top sitting surface at y = 0.44m, depth 0.40m)
+  const benchCushion = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.06, 0.40), cushionMat);
+  benchCushion.position.set(0, 0.41, -0.01);
   benchGroup.add(benchCushion);
 
-  // Bench Backrest (angled comfortably back at z = -0.32)
-  const benchBack = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.65, 0.10), woodMat);
-  benchBack.position.set(0, 0.82, -0.32);
-  benchBack.rotation.x = 0.10;
+  // Bench Backrest (angled comfortably back at z = -0.22)
+  const benchBack = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.55, 0.08), woodMat);
+  benchBack.position.set(0, 0.72, -0.22);
+  benchBack.rotation.x = 0.08;
   benchGroup.add(benchBack);
 
   // Bench Legs
-  [-1.0, 1.0].forEach((lx) => {
-    const legF = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.42, 8), woodMat);
-    legF.position.set(lx, 0.21, 0.28);
+  [-0.95, 0.95].forEach((lx) => {
+    const legF = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.38, 8), woodMat);
+    legF.position.set(lx, 0.19, 0.16);
     benchGroup.add(legF);
 
-    const legB = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.42, 8), woodMat);
-    legB.position.set(lx, 0.21, -0.28);
+    const legB = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.38, 8), woodMat);
+    legB.position.set(lx, 0.19, -0.18);
     benchGroup.add(legB);
   });
 
   // Dedicated Timber Footrest Deck directly under & in front of bench
-  const footDeck = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 1.1), teakDeckMat);
-  footDeck.position.set(0, 0.04, 0.35);
+  const footDeck = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.06, 0.85), teakDeckMat);
+  footDeck.position.set(0, 0.03, 0.28);
   benchGroup.add(footDeck);
 
   group.add(benchGroup);
@@ -385,17 +385,19 @@ export function createMountainFireworksDestination(): MountainDestination {
     const r = rockets.find((rk) => !rk.active);
     if (!r) return;
 
-    // Launch from valley floor in front of the bench (distance 32m to 55m)
-    const dist = 32 + Math.random() * 22;
-    const spread = (Math.random() - 0.5) * 24 + xOff;
+    // Launch in the viewing valley corridor ahead of the summit observation deck
+    const dist = 22 + Math.random() * 18;
+    const spread = (Math.random() - 0.5) * 20 + xOff;
     const lx = mx - 1.2 - 0.707 * dist - 0.707 * spread;
     const lz = mz + 1.5 - 0.707 * dist + 0.707 * spread + zOff;
 
     r.active = true;
-    r.pos.set(lx, 2.0, lz); // Ground elevation in valley
-    r.vel.set((Math.random() - 0.5) * 2.2, 18.5 + Math.random() * 5.5, (Math.random() - 0.5) * 2.2);
-    // Apex burst altitude directly within the camera's natural vertical framing (19m to 29m)
-    r.targetY = summitY + 9 + Math.random() * 11;
+    // Launch origin set near summit elevation so ascension trajectory is fully visible!
+    r.pos.set(lx, summitY + 1.5, lz);
+    // Ascend cleanly with strong upward momentum (22 to 27 m/s)
+    r.vel.set((Math.random() - 0.5) * 2.5, 22.0 + Math.random() * 5.0, (Math.random() - 0.5) * 2.5);
+    // Detonation apex set directly in the starry sky (summitY + 17m to summitY + 30m)
+    r.targetY = summitY + 17.0 + Math.random() * 13.0;
     r.color.copy(colorOverride || FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)]);
     r.trailTimer = 0;
 
@@ -479,7 +481,15 @@ export function createMountainFireworksDestination(): MountainDestination {
   let ambientTimer = 2.0;
 
   const triggerFirework = () => {
-    // Start or restart choreographed 20-second Diwali fireworks celebration!
+    // 1. Immediate visual fireworks detonation right in front of viewer!
+    const directBurstPos = new THREE.Vector3(
+      mx - 20 + (Math.random() - 0.5) * 6,
+      summitY + 20 + (Math.random() - 0.5) * 4,
+      mz - 28 + (Math.random() - 0.5) * 6
+    );
+    burstFirework(directBurstPos, FIREWORK_COLORS[0], "chrysanthemum");
+
+    // 2. Start or restart choreographed 20-second Diwali fireworks celebration!
     showTime = 0;
     showStage = 0;
   };

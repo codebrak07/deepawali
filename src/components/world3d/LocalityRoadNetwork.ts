@@ -30,11 +30,14 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     metalness: 0.04,
   });
 
-  // Level 1: Main Vehicular Asphalt
+  // Level 1: Main Vehicular Asphalt (with polygonOffset to prevent coplanar depth conflicts)
   const asphaltMat = new THREE.MeshStandardMaterial({
     color: 0x1a202c, // Rich dark charcoal Indian road asphalt
     roughness: 0.82,
     metalness: 0.08,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -1.0,
   });
 
   // Level 1: Intersection Junction Tile Material
@@ -42,6 +45,9 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     color: 0x222a3a, // Reinforced monolithic intersection asphalt
     roughness: 0.78,
     metalness: 0.10,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -1.0,
   });
 
   // Level 1: Sacred Sandstone Temple Courtyard Tiles (Shiva Temple)
@@ -49,6 +55,9 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     color: 0xb45309, // Warm Rajasthan Dholpur sandstone
     roughness: 0.65,
     metalness: 0.12,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -1.0,
   });
 
   // Level 1: Sacred Saffron-Terracotta Temple Tiles (Hanuman Mandir)
@@ -56,6 +65,9 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     color: 0xc2410c, // Sacred saffron terracotta paver
     roughness: 0.70,
     metalness: 0.08,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -1.0,
   });
 
   // Level 1: Sana's Villa Forecourt & Entrance Courtyard (Kota Stone)
@@ -63,6 +75,9 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     color: 0x334155, // Polished grey-green Kota stone
     roughness: 0.50,
     metalness: 0.15,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -1.0,
   });
 
   // Level 1: Festive Bazaar Promenade (Herringbone Clay Brick)
@@ -70,25 +85,42 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     color: 0x9a3412, // Vibrant festive terracotta pedestrian brick
     roughness: 0.75,
     metalness: 0.05,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -1.0,
   });
 
-  // Level 2: Surface Markings & Festive Rangoli Inlays
+  // Level 2: Surface Markings & Festive Rangoli Inlays (Decal-style rendering with higher polygonOffset priority)
   const goldMarkingMat = new THREE.MeshBasicMaterial({
     color: 0xfbbf24, // Radiant turmeric gold lane markings
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.90,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2.0,
+    polygonOffsetUnits: -2.0,
+    side: THREE.DoubleSide,
   });
 
   const zebraMarkingMat = new THREE.MeshBasicMaterial({
     color: 0xf1f5f9, // Crisp white pedestrian crossing stripes
     transparent: true,
-    opacity: 0.80,
+    opacity: 0.88,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2.0,
+    polygonOffsetUnits: -2.0,
+    side: THREE.DoubleSide,
   });
 
   const rangoliInlayMat = new THREE.MeshBasicMaterial({
     color: 0xf59e0b, // Festive amber rangoli chowk inlay
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.88,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2.0,
+    polygonOffsetUnits: -2.0,
     side: THREE.DoubleSide,
   });
 
@@ -115,14 +147,14 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
   roadGroup.add(groundMesh);
 
   // =========================================================================
-  // 3. LEVEL 1: ZONED LOCALITY COURTYARDS & CIVIC PLAZAS
+  // 3. LEVEL 1: ZONED LOCALITY COURTYARDS & CIVIC PLAZAS (y = 0.040m)
   // =========================================================================
 
   // 3A. Lord Shiva Temple Sacred Sandstone Courtyard (x: 5 to 23, z: -35 to -15)
   const shivaCourtyardGeo = new THREE.PlaneGeometry(18, 20);
   const shivaCourtyard = new THREE.Mesh(shivaCourtyardGeo, sandstoneTileMat);
   shivaCourtyard.rotation.x = -Math.PI / 2;
-  shivaCourtyard.position.set(14, 0.010, -25);
+  shivaCourtyard.position.set(14, 0.040, -25);
   shivaCourtyard.receiveShadow = true;
   roadGroup.add(shivaCourtyard);
 
@@ -130,14 +162,14 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
   const shivaRingGeo = new THREE.RingGeometry(3.5, 4.2, 32);
   const shivaRing = new THREE.Mesh(shivaRingGeo, rangoliInlayMat);
   shivaRing.rotation.x = -Math.PI / 2;
-  shivaRing.position.set(14, 0.015, -25);
+  shivaRing.position.set(14, 0.060, -25);
   roadGroup.add(shivaRing);
 
   // 3B. Shri Hanuman Mandir Terracotta Courtyard (x: -21 to -3, z: -35 to -15)
   const hanumanCourtyardGeo = new THREE.PlaneGeometry(18, 20);
   const hanumanCourtyard = new THREE.Mesh(hanumanCourtyardGeo, terracottaTileMat);
   hanumanCourtyard.rotation.x = -Math.PI / 2;
-  hanumanCourtyard.position.set(-12, 0.010, -25);
+  hanumanCourtyard.position.set(-12, 0.040, -25);
   hanumanCourtyard.receiveShadow = true;
   roadGroup.add(hanumanCourtyard);
 
@@ -145,7 +177,7 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
   const sanaForecourtGeo = new THREE.PlaneGeometry(20, 10);
   const sanaForecourt = new THREE.Mesh(sanaForecourtGeo, kotaStoneMat);
   sanaForecourt.rotation.x = -Math.PI / 2;
-  sanaForecourt.position.set(-20, 0.010, -10);
+  sanaForecourt.position.set(-20, 0.040, -10);
   sanaForecourt.receiveShadow = true;
   roadGroup.add(sanaForecourt);
 
@@ -153,19 +185,19 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
   const sanaRangoliGeo = new THREE.CircleGeometry(2.2, 24);
   const sanaRangoli = new THREE.Mesh(sanaRangoliGeo, rangoliInlayMat);
   sanaRangoli.rotation.x = -Math.PI / 2;
-  sanaRangoli.position.set(-20, 0.015, -5.2);
+  sanaRangoli.position.set(-20, 0.060, -5.2);
   roadGroup.add(sanaRangoli);
 
   // 3D. Dattawadi Festive Bazaar Pedestrian Promenade (z: 16 to 24, x: -55 to 55)
   const bazaarPromenadeGeo = new THREE.PlaneGeometry(110, 8);
   const bazaarPromenade = new THREE.Mesh(bazaarPromenadeGeo, bazaarBrickMat);
   bazaarPromenade.rotation.x = -Math.PI / 2;
-  bazaarPromenade.position.set(0, 0.010, 20);
+  bazaarPromenade.position.set(0, 0.040, 20);
   bazaarPromenade.receiveShadow = true;
   roadGroup.add(bazaarPromenade);
 
   // =========================================================================
-  // 4. LEVEL 1: MONOLITHIC INTERSECTION TILES (Seamless, Zero Overlap)
+  // 4. LEVEL 1: MONOLITHIC INTERSECTION TILES (y = 0.042m)
   // =========================================================================
   interface JunctionNode {
     id: string;
@@ -193,7 +225,7 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     const jnGeo = new THREE.CircleGeometry(jn.radius, 32);
     const jnMesh = new THREE.Mesh(jnGeo, junctionMat);
     jnMesh.rotation.x = -Math.PI / 2;
-    jnMesh.position.set(jn.x, 0.011, jn.z);
+    jnMesh.position.set(jn.x, 0.042, jn.z);
     jnMesh.receiveShadow = true;
     roadGroup.add(jnMesh);
 
@@ -202,13 +234,13 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
       const rRingGeo = new THREE.RingGeometry(jn.radius * 0.72, jn.radius * 0.88, 32);
       const rRing = new THREE.Mesh(rRingGeo, rangoliInlayMat);
       rRing.rotation.x = -Math.PI / 2;
-      rRing.position.set(jn.x, 0.016, jn.z);
+      rRing.position.set(jn.x, 0.062, jn.z);
       roadGroup.add(rRing);
     }
   });
 
   // =========================================================================
-  // 5. LEVEL 1: ROAD CORRIDORS (Cleanly Connected, Non-Overlapping)
+  // 5. LEVEL 1: ROAD CORRIDORS (y = 0.040m, Markings y = 0.060m)
   // =========================================================================
   LOCALITY_ROADS.forEach((road: RoadSegment) => {
     // Skip courtyard-handled paths to avoid duplicate paving
@@ -225,27 +257,27 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     const midX = (road.startX + road.endX) / 2;
     const midZ = (road.startZ + road.endZ) / 2;
 
-    // Road Asphalt Ribbon
+    // Road Asphalt Ribbon (Level 1: y = 0.040m)
     const roadGeo = new THREE.PlaneGeometry(road.width, length);
     const roadMesh = new THREE.Mesh(roadGeo, asphaltMat);
     roadMesh.rotation.x = -Math.PI / 2;
     roadMesh.rotation.z = -angle;
-    roadMesh.position.set(midX, 0.010, midZ);
+    roadMesh.position.set(midX, 0.040, midZ);
     roadMesh.receiveShadow = true;
     roadGroup.add(roadMesh);
 
-    // Level 2: Dashed Golden Festive Centerline
+    // Level 2: Dashed Golden Festive Centerline (y = 0.060m)
     if (length > 12) {
       const lineCount = Math.floor(length / 4.5);
       for (let i = 0; i < lineCount; i++) {
-        const lineGeo = new THREE.PlaneGeometry(0.22, 1.8);
+        const lineGeo = new THREE.PlaneGeometry(0.25, 2.0);
         const lineMesh = new THREE.Mesh(lineGeo, goldMarkingMat);
         lineMesh.rotation.x = -Math.PI / 2;
         lineMesh.rotation.z = -angle;
         const progress = (i + 0.5) / lineCount - 0.5;
         lineMesh.position.set(
           midX + dx * progress,
-          0.015,
+          0.060,
           midZ + dz * progress
         );
         roadGroup.add(lineMesh);
@@ -263,37 +295,37 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     const perpAngle = angle + Math.PI / 2;
     const offsetDist = road.width / 2 + swWidth / 2;
 
-    // Left Sidewalk Paver (Level 3: y = 0.030m, thickness = 0.05m)
-    const leftSwGeo = new THREE.BoxGeometry(swWidth, 0.05, swLength);
+    // Left Sidewalk Paver (Level 3: thickness = 0.12m, center y = 0.060m -> top y = 0.120m)
+    const leftSwGeo = new THREE.BoxGeometry(swWidth, 0.12, swLength);
     const leftSwMesh = new THREE.Mesh(leftSwGeo, sidewalkMat);
     leftSwMesh.rotation.y = angle;
     leftSwMesh.position.set(
       midX - Math.sin(perpAngle) * offsetDist,
-      0.025,
+      0.060,
       midZ - Math.cos(perpAngle) * offsetDist
     );
     leftSwMesh.receiveShadow = true;
     roadGroup.add(leftSwMesh);
 
     // Right Sidewalk Paver
-    const rightSwGeo = new THREE.BoxGeometry(swWidth, 0.05, swLength);
+    const rightSwGeo = new THREE.BoxGeometry(swWidth, 0.12, swLength);
     const rightSwMesh = new THREE.Mesh(rightSwGeo, sidewalkMat);
     rightSwMesh.rotation.y = angle;
     rightSwMesh.position.set(
       midX + Math.sin(perpAngle) * offsetDist,
-      0.025,
+      0.060,
       midZ + Math.cos(perpAngle) * offsetDist
     );
     rightSwMesh.receiveShadow = true;
     roadGroup.add(rightSwMesh);
 
-    // Granite Curb Edges along sidewalk street boundary
-    const curbGeo = new THREE.BoxGeometry(0.18, 0.08, swLength);
+    // Granite Curb Edges along sidewalk street boundary (thickness = 0.16m, center y = 0.080m -> top y = 0.160m)
+    const curbGeo = new THREE.BoxGeometry(0.18, 0.16, swLength);
     const leftCurb = new THREE.Mesh(curbGeo, curbMat);
     leftCurb.rotation.y = angle;
     leftCurb.position.set(
       midX - Math.sin(perpAngle) * (road.width / 2 + 0.09),
-      0.040,
+      0.080,
       midZ - Math.cos(perpAngle) * (road.width / 2 + 0.09)
     );
     roadGroup.add(leftCurb);
@@ -302,12 +334,12 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
     rightCurb.rotation.y = angle;
     rightCurb.position.set(
       midX + Math.sin(perpAngle) * (road.width / 2 + 0.09),
-      0.040,
+      0.080,
       midZ + Math.cos(perpAngle) * (road.width / 2 + 0.09)
     );
     roadGroup.add(rightCurb);
 
-    // Pedestrian Zebra Crosswalks at Road Ends
+    // Pedestrian Zebra Crosswalks at Road Ends (Level 2: y = 0.060m)
     if (length > 20) {
       [-1, 1].forEach((endSign) => {
         const crossZ = midZ + (dz / 2) * endSign * 0.88;
@@ -315,14 +347,14 @@ export function createLocalityRoadNetwork(scene: THREE.Scene): RoadNetworkResult
         const numBars = 5;
         const barSpacing = road.width / (numBars + 1);
         for (let b = 0; b < numBars; b++) {
-          const barGeo = new THREE.PlaneGeometry(0.40, 1.6);
+          const barGeo = new THREE.PlaneGeometry(0.45, 1.8);
           const bar = new THREE.Mesh(barGeo, zebraMarkingMat);
           bar.rotation.x = -Math.PI / 2;
           bar.rotation.z = -angle;
           const barOffset = (b - (numBars - 1) / 2) * barSpacing;
           bar.position.set(
             crossX + Math.sin(perpAngle) * barOffset,
-            0.015,
+            0.060,
             crossZ + Math.cos(perpAngle) * barOffset
           );
           roadGroup.add(bar);

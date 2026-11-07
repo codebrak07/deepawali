@@ -92,7 +92,7 @@ export class LocalitySceneEngine {
     const width = container.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 800);
     const height = container.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 600);
 
-    this.camera = new THREE.PerspectiveCamera(48, width / (height || 1), 0.1, 450);
+    this.camera = new THREE.PerspectiveCamera(48, width / (height || 1), 0.40, 450);
     this.camera.position.set(-12, 16, 28);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -101,7 +101,8 @@ export class LocalitySceneEngine {
       precision: "mediump",
     });
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1, 1.5));
+    const maxDpr = typeof window !== "undefined" && window.innerWidth < 768 ? 1.5 : 1.75;
+    this.renderer.setPixelRatio(Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1, maxDpr));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -437,14 +438,29 @@ export class LocalitySceneEngine {
       this.exitBuilding();
     }
 
+    const isTargetMountain = Math.hypot(x - 105, z - (-95)) < 16;
     let targetY = 0;
-    if (this.mountainSuite) {
-      targetY = this.mountainSuite.getTrailElevation(x, z) ?? 0;
+    let spawnX = x;
+    let spawnZ = z;
+    let spawnRotation = rotationY;
+
+    if (isTargetMountain) {
+      // Direct summit observation deck positioning facing fireworks valley
+      targetY = 26.0;
+      spawnX = 104.2;
+      spawnZ = -93.8;
+      spawnRotation = -Math.PI * 0.75;
+    } else {
+      if (this.mountainSuite) {
+        targetY = this.mountainSuite.getTrailElevation(x, z) ?? 0;
+      }
+      const safePos = this.collisionSystem.findSafeSpawnPosition(x, z, false);
+      spawnX = safePos.x;
+      spawnZ = safePos.z;
     }
 
-    const safePos = this.collisionSystem.findSafeSpawnPosition(x, z, false);
-    this.charPos.set(safePos.x, targetY, safePos.z);
-    this.charRotation = rotationY;
+    this.charPos.set(spawnX, targetY, spawnZ);
+    this.charRotation = spawnRotation;
 
     const spacing = 0.78;
     const perpX = Math.cos(this.charRotation);
@@ -460,7 +476,7 @@ export class LocalitySceneEngine {
     this.shirjana.root.rotation.y = this.charRotation;
 
     this.resetCamera();
-    this.snapCameraToTarget(6.5, 0.25, 0);
+    this.snapCameraToTarget(6.5, 0.25, this.charRotation + Math.PI);
 
     this.clearWaypoint();
     this.onProximityChange?.(null);
@@ -517,6 +533,7 @@ export class LocalitySceneEngine {
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
       ...this.vehicleColliders,
+      ...this.mountainSuite.colliders,
     ]);
 
     // Place character out in the open street in front of Sana Residence facing north towards temples
@@ -580,6 +597,7 @@ export class LocalitySceneEngine {
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
       ...this.vehicleColliders,
+      ...this.mountainSuite.colliders,
     ]);
 
     // Place player in the open temple courtyard plaza (clear from steps and nearby buildings)
@@ -644,6 +662,7 @@ export class LocalitySceneEngine {
       ...this.templeSuite.exteriorColliders,
       ...this.hanumanSuite.exteriorColliders,
       ...this.vehicleColliders,
+      ...this.mountainSuite.colliders,
     ]);
 
     // Place player in the open Hanuman Mandir plaza (free from collisions)
@@ -681,10 +700,10 @@ export class LocalitySceneEngine {
       const rightVec = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
       const fwdVec = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
 
-      // Aalekh seated on left side of bench, sitting directly on cushion
+      // Aalekh seated on left side of bench, resting squarely on the velvet cushion
       const aalekhPos = anchor.position.clone()
-        .addScaledVector(rightVec, -0.38)
-        .addScaledVector(fwdVec, 0.04);
+        .addScaledVector(rightVec, -0.36)
+        .addScaledVector(fwdVec, 0.05);
       aalekhPos.y = anchor.position.y;
       this.charPos.copy(aalekhPos);
       this.charRotation = anchor.rotationY;
@@ -693,10 +712,10 @@ export class LocalitySceneEngine {
       this.aalekh.root.rotation.y = anchor.rotationY;
       this.aalekh.setSitting(true);
 
-      // Sana seated on right side of bench, sitting directly on cushion
+      // Sana seated on right side of bench, resting squarely on the velvet cushion
       const sanaPos = anchor.position.clone()
-        .addScaledVector(rightVec, +0.38)
-        .addScaledVector(fwdVec, 0.04);
+        .addScaledVector(rightVec, +0.36)
+        .addScaledVector(fwdVec, 0.05);
       sanaPos.y = anchor.position.y;
       this.shirjana.root.position.copy(sanaPos);
       this.shirjana.root.rotation.y = anchor.rotationY;
@@ -704,8 +723,8 @@ export class LocalitySceneEngine {
 
       // Third-person scenic camera framing: behind couple looking over shoulders at fireworks
       this.orbitYaw = anchor.rotationY + Math.PI;
-      this.orbitPitch = 0.12;
-      this.orbitDistance = 4.2;
+      this.orbitPitch = 0.14;
+      this.orbitDistance = 4.0;
     } else if (anchor.id === "seat-sofa-center") {
       this.charPos.set(anchor.position.x, anchor.position.y, anchor.position.z);
       this.charRotation = anchor.rotationY;

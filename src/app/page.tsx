@@ -46,6 +46,9 @@ export default function Page() {
     };
 
     let lastTransformTime = 0;
+    let lastSentX = 999999;
+    let lastSentZ = 999999;
+    let lastSentHeading = 999999;
     let prevInsideBuilding = false;
     let prevInsideTemple = false;
     let prevInsideHanuman = false;
@@ -55,10 +58,18 @@ export default function Page() {
 
     engine.onPlayerTransformChange = (pos, heading) => {
       const now = performance.now();
-      if (now - lastTransformTime > 33) {
-        lastTransformTime = now;
-        setPlayerPos(pos);
-        setPlayerHeading(heading);
+      // Throttle minimap and spatial state updates to 12.5Hz (80ms) and skip redundant updates when stationary
+      if (now - lastTransformTime > 80) {
+        const dMove = Math.hypot(pos.x - lastSentX, pos.z - lastSentZ);
+        const dRot = Math.abs(heading - lastSentHeading);
+        if (dMove > 0.04 || dRot > 0.02) {
+          lastTransformTime = now;
+          lastSentX = pos.x;
+          lastSentZ = pos.z;
+          lastSentHeading = heading;
+          setPlayerPos(pos);
+          setPlayerHeading(heading);
+        }
       }
 
       if (prevInsideBuilding !== engine.isInsideBuilding) {

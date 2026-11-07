@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 export interface Person1RigInstance {
   root: THREE.Group;
@@ -16,9 +17,23 @@ export interface Person1RigInstance {
 let cachedRigInstance: Person1RigInstance | null = null;
 let loadingPromise: Promise<Person1RigInstance> | null = null;
 
+// Shared Draco Decoder for high-efficiency WebAssembly model decompression
+let sharedDracoLoader: DRACOLoader | null = null;
+function getSharedDracoLoader(): DRACOLoader {
+  if (!sharedDracoLoader) {
+    sharedDracoLoader = new DRACOLoader();
+    if (typeof window !== "undefined") {
+      sharedDracoLoader.setDecoderPath("/draco/");
+      sharedDracoLoader.preload();
+    }
+  }
+  return sharedDracoLoader;
+}
+
 /**
  * Loads Person 1 (Boy / Aalekh) directly from /person_model.glb
- * in pristine original geometry without synthetic bone rigging or mesh distortion.
+ * with Google Draco 3D WebAssembly acceleration.
+ * Clean monolithic model preserving authentic textures, geometry, and natural posture.
  */
 export function loadPerson1Rig(targetHeight = 1.78): Promise<Person1RigInstance> {
   if (cachedRigInstance) {
@@ -30,6 +45,7 @@ export function loadPerson1Rig(targetHeight = 1.78): Promise<Person1RigInstance>
 
   loadingPromise = new Promise<Person1RigInstance>((resolve, reject) => {
     const gltfLoader = new GLTFLoader();
+    gltfLoader.setDRACOLoader(getSharedDracoLoader());
 
     gltfLoader.load(
       "/person_model.glb",
@@ -89,7 +105,8 @@ export function loadPerson1Rig(targetHeight = 1.78): Promise<Person1RigInstance>
 
         const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
           if (isSitting) {
-            modelMesh.position.set(0, -0.40, 0.04);
+            // Natural seated position resting directly on cushion with back gently touching backrest
+            modelMesh.position.set(0, -0.22, 0.02);
             modelMesh.rotation.set(-0.04, 0, 0);
             return;
           }

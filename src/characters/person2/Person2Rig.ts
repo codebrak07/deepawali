@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 export interface Person2RigInstance {
   root: THREE.Group;
@@ -16,9 +17,23 @@ export interface Person2RigInstance {
 let cachedRigInstance: Person2RigInstance | null = null;
 let loadingPromise: Promise<Person2RigInstance> | null = null;
 
+// Shared Draco Decoder for high-efficiency WebAssembly model decompression
+let sharedDracoLoader: DRACOLoader | null = null;
+function getSharedDracoLoader(): DRACOLoader {
+  if (!sharedDracoLoader) {
+    sharedDracoLoader = new DRACOLoader();
+    if (typeof window !== "undefined") {
+      sharedDracoLoader.setDecoderPath("/draco/");
+      sharedDracoLoader.preload();
+    }
+  }
+  return sharedDracoLoader;
+}
+
 /**
  * Loads Person 2 (Girl / Sana) directly from /streetwear_86_full_body.glb
- * in pristine original geometry without synthetic bone rigging or mesh distortion.
+ * with Google Draco 3D WebAssembly acceleration.
+ * Clean monolithic model preserving authentic textures, geometry, and natural posture.
  */
 export function loadPerson2Rig(targetHeight = 1.65): Promise<Person2RigInstance> {
   if (cachedRigInstance) {
@@ -30,6 +45,7 @@ export function loadPerson2Rig(targetHeight = 1.65): Promise<Person2RigInstance>
 
   loadingPromise = new Promise<Person2RigInstance>((resolve, reject) => {
     const gltfLoader = new GLTFLoader();
+    gltfLoader.setDRACOLoader(getSharedDracoLoader());
 
     gltfLoader.load(
       "/streetwear_86_full_body.glb",
@@ -89,7 +105,8 @@ export function loadPerson2Rig(targetHeight = 1.65): Promise<Person2RigInstance>
 
         const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
           if (isSitting) {
-            modelMesh.position.set(0, -0.34, 0.04);
+            // Natural seated position resting directly on cushion with back gently touching backrest
+            modelMesh.position.set(0, -0.22, 0.02);
             modelMesh.rotation.set(-0.04, 0, 0);
             return;
           }
@@ -103,13 +120,13 @@ export function loadPerson2Rig(targetHeight = 1.65): Promise<Person2RigInstance>
             walkPhase += 0.085 * strideSpeed;
 
             // Natural step bounce & subtle stride hip sway
-            modelMesh.position.y = Math.abs(Math.sin(walkPhase * 2.0)) * 0.035;
-            modelMesh.rotation.z = -Math.sin(walkPhase) * 0.020;
-            modelMesh.rotation.x = 0.030; // Forward kinetic lean
-            modelMesh.rotation.y = Math.sin(walkPhase) * 0.025;
+            modelMesh.position.y = Math.abs(Math.sin(walkPhase * 2.0)) * 0.038;
+            modelMesh.rotation.z = Math.sin(walkPhase) * 0.020;
+            modelMesh.rotation.x = 0.035; // Forward kinetic lean
+            modelMesh.rotation.y = -Math.sin(walkPhase) * 0.025;
           } else {
             // Natural idle breathing
-            modelMesh.position.set(0, Math.sin(time * 2.4) * 0.007, 0);
+            modelMesh.position.set(0, Math.sin(time * 2.2) * 0.007, 0);
             modelMesh.rotation.set(0, 0, 0);
           }
         };
