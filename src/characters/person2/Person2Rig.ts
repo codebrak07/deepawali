@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import {
+  createPerson2Skeleton,
+  Person2AnimationController,
+} from "./Person2Animations";
+import { applyHumanoidSkinning } from "../common/HumanoidSkinning";
 
 export interface Person2RigInstance {
   root: THREE.Group;
@@ -8,10 +13,10 @@ export interface Person2RigInstance {
   setHoldingHands: (holding: boolean) => void;
   setSitting: (sitting: boolean) => void;
   setPraying: (praying: boolean) => void;
-  skinnedMesh?: any;
-  skeleton?: any;
+  skinnedMesh?: THREE.SkinnedMesh;
+  skeleton?: THREE.Skeleton;
   bones?: any;
-  controller?: any;
+  controller?: Person2AnimationController;
 }
 
 let cachedRigInstance: Person2RigInstance | null = null;
@@ -33,7 +38,8 @@ function getSharedDracoLoader(): DRACOLoader {
 /**
  * Loads Person 2 (Girl / Sana) directly from /streetwear_86_full_body.glb
  * with Google Draco 3D WebAssembly acceleration.
- * Clean monolithic model preserving authentic textures, geometry, and natural posture.
+ * Bound to humanoid anatomical skeleton with dynamic walking locomotion,
+ * knee bending, pelvic bounce, natural independent arm swings, and seating poses.
  */
 export function loadPerson2Rig(targetHeight = 1.65): Promise<Person2RigInstance> {
   if (cachedRigInstance) {
@@ -81,54 +87,43 @@ export function loadPerson2Rig(targetHeight = 1.65): Promise<Person2RigInstance>
         origGeo.computeBoundingBox();
         origGeo.computeVertexNormals();
 
-        const modelMesh = new THREE.Mesh(origGeo, (foundMesh as THREE.Mesh).material);
-        modelMesh.castShadow = true;
-        modelMesh.receiveShadow = true;
+        // 1. Build anatomical 26-bone skeleton
+        const { skeleton, bones, allBones } = createPerson2Skeleton(targetHeight);
+
+        // 2. Compute smooth vertex skinning weights
+        applyHumanoidSkinning(origGeo, bones, allBones, targetHeight);
+
+        // 3. Create GPU SkinnedMesh
+        const skinnedMesh = new THREE.SkinnedMesh(origGeo, (foundMesh as THREE.Mesh).material);
+        skinnedMesh.castShadow = true;
+        skinnedMesh.receiveShadow = true;
+        skinnedMesh.add(bones.root);
+        skinnedMesh.bind(skeleton);
 
         const root = new THREE.Group();
-        root.name = "Person2_CleanModelRoot";
-        root.add(modelMesh);
+        root.name = "Person2_SkinnedModelRoot";
+        root.add(skinnedMesh);
 
-        let walkPhase = 0;
-        let isSitting = false;
-        let isPraying = false;
+        // 4. Biomechanical Kinematic Controller
+        const controller = new Person2AnimationController(bones, targetHeight);
 
-        const setHoldingHands = (_holding: boolean) => {};
-        const setSitting = (sitting: boolean) => {
-          isSitting = sitting;
-          if (sitting) isPraying = false;
-        };
-        const setPraying = (praying: boolean) => {
-          isPraying = praying;
-          if (praying) isSitting = false;
-        };
-
+        let lastTime = 0;
         const updateAnimation = (isWalking: boolean, time: number, moveSpeed = 6.0) => {
-          if (isSitting) {
-            // Natural seated position resting directly on cushion with back gently touching backrest
-            modelMesh.position.set(0, -0.22, 0.02);
-            modelMesh.rotation.set(-0.04, 0, 0);
-            return;
-          }
-          if (isPraying) {
-            modelMesh.position.set(0, 0, 0);
-            modelMesh.rotation.set(0.08, 0, 0);
-            return;
-          }
-          if (isWalking) {
-            const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
-            walkPhase += 0.085 * strideSpeed;
+          const delta = lastTime > 0 ? Math.min(0.1, time - lastTime) : 0.016;
+          lastTime = time;
+          controller.update(isWalking, time, moveSpeed, delta);
+        };
 
-            // Natural step bounce & subtle stride hip sway
-            modelMesh.position.y = Math.abs(Math.sin(walkPhase * 2.0)) * 0.038;
-            modelMesh.rotation.z = Math.sin(walkPhase) * 0.020;
-            modelMesh.rotation.x = 0.035; // Forward kinetic lean
-            modelMesh.rotation.y = -Math.sin(walkPhase) * 0.025;
-          } else {
-            // Natural idle breathing
-            modelMesh.position.set(0, Math.sin(time * 2.2) * 0.007, 0);
-            modelMesh.rotation.set(0, 0, 0);
-          }
+        const setHoldingHands = (_holding: boolean) => {
+          controller.setHoldingHands(false);
+        };
+
+        const setSitting = (sitting: boolean) => {
+          controller.setSitting(sitting);
+        };
+
+        const setPraying = (praying: boolean) => {
+          controller.setPraying(praying);
         };
 
         const instance: Person2RigInstance = {
@@ -137,6 +132,10 @@ export function loadPerson2Rig(targetHeight = 1.65): Promise<Person2RigInstance>
           setHoldingHands,
           setSitting,
           setPraying,
+          skinnedMesh,
+          skeleton,
+          bones,
+          controller,
         };
 
         cachedRigInstance = instance;

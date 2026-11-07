@@ -215,6 +215,7 @@ export class Person2AnimationController {
   public height: number;
 
   private walkPhase = 0;
+  private walkWeight = 0;
   private isSitting = false;
   private isPraying = false;
 
@@ -239,7 +240,7 @@ export class Person2AnimationController {
     if (praying) this.isSitting = false;
   }
 
-  public update(isWalking: boolean, time: number, moveSpeed = 6.0) {
+  public update(isWalking: boolean, time: number, moveSpeed = 6.0, delta = 0.016) {
     const {
       hips,
       spine,
@@ -349,96 +350,71 @@ export class Person2AnimationController {
     }
 
     // -------------------------------------------------------------------------
-    // 3. BIOMECHANICAL WALKING KINEMATICS (INDEPENDENT NATURAL ARMS & STRIDE)
+    // 3. SMOOTH KINEMATIC BLENDING (WALK WEIGHT INTERPOLATION)
     // -------------------------------------------------------------------------
-    if (isWalking) {
-      const strideSpeed = Math.max(1.0, moveSpeed * 0.75);
-      this.walkPhase += 0.085 * strideSpeed;
+    const targetWeight = isWalking ? 1.0 : 0.0;
+    this.walkWeight = THREE.MathUtils.damp(this.walkWeight, targetWeight, 10.0, delta);
 
-      const thighSwing = Math.sin(this.walkPhase) * 0.44;
-      leftThigh.rotation.x = thighSwing;
-      rightThigh.rotation.x = -thighSwing;
-
-      const leftKneeBend = Math.max(0, -Math.sin(this.walkPhase + 0.35)) * 0.68;
-      const rightKneeBend = Math.max(0, Math.sin(this.walkPhase + 0.35)) * 0.68;
-      leftKnee.rotation.x = leftKneeBend;
-      rightKnee.rotation.x = rightKneeBend;
-
-      leftAnkle.rotation.x = -(thighSwing + leftKneeBend) * 0.52;
-      rightAnkle.rotation.x = -(-thighSwing + rightKneeBend) * 0.52;
-      leftFoot.rotation.x = -thighSwing * 0.18;
-      rightFoot.rotation.x = thighSwing * 0.18;
-
-      const bounce = Math.abs(Math.sin(this.walkPhase * 2.0)) * 0.044;
-      hips.position.y = this.baseHipsY + bounce;
-
-      hips.rotation.z = -Math.sin(this.walkPhase) * 0.022;
-      hips.rotation.y = Math.sin(this.walkPhase) * 0.030;
-
-      spine.rotation.y = -Math.sin(this.walkPhase) * 0.035;
-      chest.rotation.y = -Math.sin(this.walkPhase) * 0.018;
-      chest.rotation.x = 0.038;
-
-      head.rotation.y = -Math.cos(this.walkPhase) * 0.020;
-      neck.rotation.set(0, 0, 0);
-
-      // Left Arm: natural counter-stride swing beside body
-      leftClavicle.rotation.set(0, 0, 0);
-      leftUpperArm.rotation.x = thighSwing * 0.70;
-      leftUpperArm.rotation.y = 0;
-      leftUpperArm.rotation.z = 0.08;
-      leftForearm.rotation.x = 0.20 + Math.max(0, -thighSwing) * 0.35;
-      leftWrist.rotation.set(0, 0, 0);
-      leftHand.rotation.set(0, 0, 0);
-      leftFingers.rotation.set(0.15, 0, 0);
-
-      // Right Arm: natural counter-stride swing beside body
-      rightClavicle.rotation.set(0, 0, 0);
-      rightUpperArm.rotation.x = -thighSwing * 0.70;
-      rightUpperArm.rotation.y = 0;
-      rightUpperArm.rotation.z = -0.08;
-      rightForearm.rotation.x = 0.20 + Math.max(0, thighSwing) * 0.35;
-      rightWrist.rotation.set(0, 0, 0);
-      rightHand.rotation.set(0, 0, 0);
-      rightFingers.rotation.set(0.15, 0, 0);
-      return;
+    if (this.walkWeight > 0.001) {
+      const cadence = Math.max(3.2, moveSpeed * 1.5);
+      this.walkPhase += cadence * delta;
     }
 
-    // -------------------------------------------------------------------------
-    // 4. NATURAL IDLE BREATHING & GROUNDED STANCE
-    // -------------------------------------------------------------------------
+    const w = this.walkWeight;
+    const idleWeight = 1.0 - w;
+
     const breath = Math.sin(time * 2.4) * 0.010;
     const sway = Math.cos(time * 1.4) * 0.005;
 
-    hips.position.set(0, this.baseHipsY + breath, 0);
-    hips.rotation.set(0, 0, -sway * 0.5);
+    const thighSwing = Math.sin(this.walkPhase) * 0.46 * w;
+    leftThigh.rotation.x = thighSwing;
+    rightThigh.rotation.x = -thighSwing;
+    leftThigh.rotation.z = -0.02 * idleWeight;
+    rightThigh.rotation.z = 0.02 * idleWeight;
 
-    spine.rotation.set(0, 0, 0);
-    chest.rotation.set(0.02 + breath * 0.5, 0, 0);
+    const leftKneeBend = Math.max(0, -Math.sin(this.walkPhase + 0.35)) * 0.72 * w;
+    const rightKneeBend = Math.max(0, Math.sin(this.walkPhase + 0.35)) * 0.72 * w;
+    leftKnee.rotation.x = leftKneeBend;
+    rightKnee.rotation.x = rightKneeBend;
+
+    leftAnkle.rotation.x = -(thighSwing + leftKneeBend) * 0.52;
+    rightAnkle.rotation.x = -(-thighSwing + rightKneeBend) * 0.52;
+    leftFoot.rotation.x = -thighSwing * 0.18;
+    rightFoot.rotation.x = thighSwing * 0.18;
+
+    const bounce = Math.abs(Math.sin(this.walkPhase * 2.0)) * 0.038 * w;
+    hips.position.set(
+      0,
+      this.baseHipsY + (bounce * w) + (breath * idleWeight),
+      0
+    );
+
+    hips.rotation.z = -Math.sin(this.walkPhase) * 0.022 * w - sway * 0.5 * idleWeight;
+    hips.rotation.y = Math.sin(this.walkPhase) * 0.030 * w;
+
+    spine.rotation.y = -Math.sin(this.walkPhase) * 0.035 * w;
+    chest.rotation.y = -Math.sin(this.walkPhase) * 0.018 * w;
+    chest.rotation.x = 0.036 * w + (0.02 + breath * 0.5) * idleWeight;
+
+    head.rotation.y = -Math.cos(this.walkPhase) * 0.020 * w - sway * idleWeight;
     neck.rotation.set(0, 0, 0);
-    head.rotation.set(0, -sway, 0);
 
-    leftThigh.rotation.set(0, 0, -0.02);
-    rightThigh.rotation.set(0, 0, 0.02);
-    leftKnee.rotation.set(0, 0, 0);
-    rightKnee.rotation.set(0, 0, 0);
-    leftAnkle.rotation.set(0, 0, 0);
-    rightAnkle.rotation.set(0, 0, 0);
-    leftFoot.rotation.set(0, 0, 0);
-    rightFoot.rotation.set(0, 0, 0);
-
-    // Left arm naturally relaxed beside body, slight elbow bend, hand near thigh
+    // Left Arm: natural counter-stride swing beside body
     leftClavicle.rotation.set(0, 0, 0);
-    leftUpperArm.rotation.set(0.06, 0, 0.08);
-    leftForearm.rotation.set(0.14, 0, 0);
+    leftUpperArm.rotation.x = thighSwing * 0.70 + 0.06 * idleWeight;
+    leftUpperArm.rotation.y = 0;
+    leftUpperArm.rotation.z = 0.08;
+    leftForearm.rotation.x = (0.20 + Math.max(0, -thighSwing) * 0.35) * w + 0.14 * idleWeight;
     leftWrist.rotation.set(0, 0, 0);
     leftHand.rotation.set(0, 0, 0);
     leftFingers.rotation.set(0.15, 0, 0);
 
-    // Right arm naturally relaxed beside body, slight elbow bend, hand near thigh
+    // Right Arm: independent natural counter-stride swing beside body
     rightClavicle.rotation.set(0, 0, 0);
-    rightUpperArm.rotation.set(0.06, 0, -0.08);
-    rightForearm.rotation.set(0.14, 0, 0);
+    rightUpperArm.rotation.x = -thighSwing * 0.70 + 0.06 * idleWeight;
+    rightUpperArm.rotation.y = 0;
+    rightUpperArm.rotation.z = -0.08;
+    rightForearm.rotation.x = (0.20 + Math.max(0, thighSwing) * 0.35) * w + 0.14 * idleWeight;
     rightWrist.rotation.set(0, 0, 0);
     rightHand.rotation.set(0, 0, 0);
     rightFingers.rotation.set(0.15, 0, 0);

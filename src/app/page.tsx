@@ -276,6 +276,19 @@ export default function Page() {
   const handleTeleport = (x: number, z: number) => {
     if (engineRef.current) {
       engineRef.current.navigateTo(x, z);
+      // Immediately synchronize React states to eliminate stale UI
+      setIsInsideBuilding(engineRef.current.isInsideBuilding);
+      setIsInsideTemple(engineRef.current.isInsideTemple);
+      setIsInsideHanuman(engineRef.current.isInsideHanuman);
+      setIsSitting(engineRef.current.isSitting);
+      setIsWatchingTV(engineRef.current.isWatchingTV);
+      setNearbyStation(null);
+    }
+  };
+
+  const handleSittingPOVChange = (pov: "vista" | "first_person" | "couple") => {
+    if (engineRef.current) {
+      engineRef.current.setSittingPOV(pov);
     }
   };
 
@@ -480,8 +493,15 @@ export default function Page() {
           isSitting={isSitting}
           isWatchingTV={isWatchingTV}
           tvChannelName={tvChannelName}
-          onSitDown={(anchor) => engineRef.current?.sitDown(anchor)}
-          onStandUp={() => engineRef.current?.standUp()}
+          onSitDown={(anchor) => {
+            engineRef.current?.sitDown(anchor);
+            setIsSitting(true);
+          }}
+          onStandUp={() => {
+            engineRef.current?.standUp();
+            setIsSitting(false);
+            setIsWatchingTV(false);
+          }}
           onWatchTV={() => engineRef.current?.watchTV()}
           onStopWatchingTV={() => engineRef.current?.stopWatchingTV()}
           onNextTVChannel={() => engineRef.current?.nextTVChannel()}
@@ -490,6 +510,7 @@ export default function Page() {
             engineRef.current?.triggerMountainFireworks();
             soundManager.playFireworkBurst();
           }}
+          onSittingPOVChange={handleSittingPOVChange}
         />
       )}
 

@@ -322,8 +322,8 @@ export function createMountainFireworksDestination(): MountainDestination {
   // =========================================================================
   // 5. TRUE CINEMATIC DIWALI FIREWORKS ENGINE (CRISP SPARKS — ZERO OVERSIZED BLOBS)
   // =========================================================================
-  const MAX_PARTICLES = 3600;
-  const MAX_ROCKETS = 16;
+  const MAX_PARTICLES = 4800;
+  const MAX_ROCKETS = 24;
 
   const particles: FireworkParticle[] = [];
   for (let i = 0; i < MAX_PARTICLES; i++) {
@@ -351,6 +351,27 @@ export function createMountainFireworksDestination(): MountainDestination {
     });
   }
 
+  // Luminous circular radial glow texture for realistic pyrotechnic sparks
+  function createSparkTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement("canvas");
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0.0, "rgba(255, 255, 255, 1.0)");
+      grad.addColorStop(0.2, "rgba(255, 245, 210, 0.95)");
+      grad.addColorStop(0.5, "rgba(255, 180, 50, 0.40)");
+      grad.addColorStop(0.8, "rgba(255, 100, 20, 0.12)");
+      grad.addColorStop(1.0, "rgba(255, 60, 0, 0.0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
   // Particle Buffer Geometry for WebGL Draw Calls
   const pPositions = new Float32Array(MAX_PARTICLES * 3);
   const pColors = new Float32Array(MAX_PARTICLES * 3);
@@ -359,9 +380,11 @@ export function createMountainFireworksDestination(): MountainDestination {
   pGeo.setAttribute("position", new THREE.BufferAttribute(pPositions, 3));
   pGeo.setAttribute("color", new THREE.BufferAttribute(pColors, 3));
 
-  // Crisp, sharp pyrotechnic point material (size: 1.1 — NOT oversized 4.8 blobs!)
+  // Radiant pyrotechnic spark material with soft circular texture
+  const sparkTexture = typeof document !== "undefined" ? createSparkTexture() : null;
   const pMat = new THREE.PointsMaterial({
-    size: 1.15,
+    size: 2.8,
+    map: sparkTexture,
     vertexColors: true,
     transparent: true,
     opacity: 0.95,
@@ -386,18 +409,18 @@ export function createMountainFireworksDestination(): MountainDestination {
     if (!r) return;
 
     // Launch in the viewing valley corridor ahead of the summit observation deck
-    const dist = 22 + Math.random() * 18;
-    const spread = (Math.random() - 0.5) * 20 + xOff;
+    const dist = 18 + Math.random() * 14;
+    const spread = (Math.random() - 0.5) * 16 + xOff;
     const lx = mx - 1.2 - 0.707 * dist - 0.707 * spread;
     const lz = mz + 1.5 - 0.707 * dist + 0.707 * spread + zOff;
 
     r.active = true;
     // Launch origin set near summit elevation so ascension trajectory is fully visible!
-    r.pos.set(lx, summitY + 1.5, lz);
-    // Ascend cleanly with strong upward momentum (22 to 27 m/s)
-    r.vel.set((Math.random() - 0.5) * 2.5, 22.0 + Math.random() * 5.0, (Math.random() - 0.5) * 2.5);
-    // Detonation apex set directly in the starry sky (summitY + 17m to summitY + 30m)
-    r.targetY = summitY + 17.0 + Math.random() * 13.0;
+    r.pos.set(lx, summitY + 1.2, lz);
+    // Ascend cleanly with strong upward momentum (16 to 22 m/s)
+    r.vel.set((Math.random() - 0.5) * 2.0, 16.0 + Math.random() * 4.0, (Math.random() - 0.5) * 2.0);
+    // Detonation apex set directly in prime camera sweet spot (summitY + 9m to summitY + 16m)
+    r.targetY = summitY + 9.0 + Math.random() * 7.0;
     r.color.copy(colorOverride || FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)]);
     r.trailTimer = 0;
 
@@ -412,26 +435,26 @@ export function createMountainFireworksDestination(): MountainDestination {
     skyFlashLight.position.copy(center);
     skyFlashLight.intensity = 1.4;
 
-    let sparkCount = 110;
-    let baseSpeed = 12.0;
-    let gravity = -6.0;
-    let decayRate = 0.020;
+    let sparkCount = 130;
+    let baseSpeed = 11.0;
+    let gravity = -5.0;
+    let decayRate = 0.016;
 
     if (type === "willow") {
-      sparkCount = 140;
-      baseSpeed = 7.5;
-      gravity = -2.8; // Gentle downward cascading willow streams
-      decayRate = 0.012; // Long hanging time
+      sparkCount = 160;
+      baseSpeed = 7.0;
+      gravity = -2.4; // Gentle downward cascading willow streams
+      decayRate = 0.010; // Long hanging time
     } else if (type === "peony") {
-      sparkCount = 100;
-      baseSpeed = 16.5; // Fast energetic expansion
-      gravity = -4.5;
-      decayRate = 0.024;
+      sparkCount = 120;
+      baseSpeed = 14.5; // Fast energetic expansion
+      gravity = -3.8;
+      decayRate = 0.020;
     } else if (type === "ring") {
-      sparkCount = 85;
-      baseSpeed = 13.0;
-      gravity = -3.5;
-      decayRate = 0.018;
+      sparkCount = 100;
+      baseSpeed = 12.0;
+      gravity = -3.0;
+      decayRate = 0.015;
     }
 
     let spawned = 0;
@@ -445,17 +468,17 @@ export function createMountainFireworksDestination(): MountainDestination {
       if (type === "ring") {
         // Toroidal horizontal ring distribution
         const theta = (spawned / sparkCount) * Math.PI * 2;
-        const spd = baseSpeed + (Math.random() - 0.5) * 2.0;
-        p.vel.set(Math.cos(theta) * spd, (Math.random() - 0.5) * 2.0, Math.sin(theta) * spd);
+        const spd = baseSpeed + (Math.random() - 0.5) * 1.5;
+        p.vel.set(Math.cos(theta) * spd, (Math.random() - 0.5) * 1.5, Math.sin(theta) * spd);
       } else {
         // Natural spherical burst velocity
         const phi = Math.acos(2 * Math.random() - 1);
         const theta = Math.random() * Math.PI * 2;
-        const spd = baseSpeed + (Math.random() - 0.5) * 5.0;
+        const spd = baseSpeed + (Math.random() - 0.5) * 4.0;
 
         p.vel.set(
           Math.sin(phi) * Math.cos(theta) * spd,
-          Math.cos(phi) * spd + 1.2,
+          Math.cos(phi) * spd + 1.0,
           Math.sin(phi) * Math.sin(theta) * spd
         );
       }
@@ -474,22 +497,33 @@ export function createMountainFireworksDestination(): MountainDestination {
   }
 
   // =========================================================================
-  // 6. CHOREOGRAPHED DIWALI CELEBRATION SHOW (20-SECOND FESTIVAL DISPLAY)
+  // 6. CHOREOGRAPHED DIWALI CELEBRATION SHOW (CONTINUOUS MASSIVE CELEBRATION)
   // =========================================================================
   let showTime = -1; // -1 = ambient idle mode; >= 0 = choreographed show active
   let showStage = 0;
-  let ambientTimer = 2.0;
+  let ambientTimer = 1.0;
 
   const triggerFirework = () => {
-    // 1. Immediate visual fireworks detonation right in front of viewer!
-    const directBurstPos = new THREE.Vector3(
-      mx - 20 + (Math.random() - 0.5) * 6,
-      summitY + 20 + (Math.random() - 0.5) * 4,
-      mz - 28 + (Math.random() - 0.5) * 6
+    // 1. Immediate visual fireworks detonations right in center of viewer screen!
+    const burst1 = new THREE.Vector3(
+      mx - 1.2 - 0.707 * 22,
+      summitY + 11.0,
+      mz + 1.5 - 0.707 * 22
     );
-    burstFirework(directBurstPos, FIREWORK_COLORS[0], "chrysanthemum");
+    const burst2 = new THREE.Vector3(
+      mx - 1.2 - 0.707 * 26 + 4,
+      summitY + 13.5,
+      mz + 1.5 - 0.707 * 26 - 4
+    );
+    burstFirework(burst1, FIREWORK_COLORS[0], "chrysanthemum");
+    burstFirework(burst2, FIREWORK_COLORS[1], "willow");
 
-    // 2. Start or restart choreographed 20-second Diwali fireworks celebration!
+    // 2. Launch 3 simultaneous ascending rockets across the sky
+    spawnRocket("peony", FIREWORK_COLORS[2], -8, 0);
+    spawnRocket("starburst", FIREWORK_COLORS[3], 0, 0);
+    spawnRocket("ring", FIREWORK_COLORS[4], 8, 0);
+
+    // 3. Start or loop choreographed celebration!
     showTime = 0;
     showStage = 0;
   };
@@ -534,27 +568,27 @@ export function createMountainFireworksDestination(): MountainDestination {
         spawnRocket("chrysanthemum", FIREWORK_COLORS[1], 8, 0);
         showStage = 1;
       }
-      // Wave 2 (t=2.6s): Emerald & Ruby Peonies
-      else if (showStage === 1 && showTime >= 2.6) {
+      // Wave 2 (t=2.0s): Emerald & Ruby Peonies
+      else if (showStage === 1 && showTime >= 2.0) {
         spawnRocket("peony", FIREWORK_COLORS[2], -12, -4);
         spawnRocket("peony", FIREWORK_COLORS[3], 12, -4);
         showStage = 2;
       }
-      // Wave 3 (t=5.4s): Cascading Golden Weeping Willow Centerpiece
-      else if (showStage === 2 && showTime >= 5.4) {
+      // Wave 3 (t=4.2s): Cascading Golden Weeping Willow Centerpiece
+      else if (showStage === 2 && showTime >= 4.2) {
         spawnRocket("willow", FIREWORK_COLORS[0], 0, 4);
         spawnRocket("ring", FIREWORK_COLORS[4], -10, 0);
         showStage = 3;
       }
-      // Wave 4 (t=8.8s): Celestial Purple & Peacock Cyan Staggered Salvo
-      else if (showStage === 3 && showTime >= 8.8) {
+      // Wave 4 (t=6.8s): Celestial Purple & Peacock Cyan Staggered Salvo
+      else if (showStage === 3 && showTime >= 6.8) {
         spawnRocket("starburst", FIREWORK_COLORS[5], -7, -2);
         spawnRocket("peony", FIREWORK_COLORS[4], 7, -2);
         spawnRocket("chrysanthemum", FIREWORK_COLORS[6], 0, -6);
         showStage = 4;
       }
-      // Wave 5 (t=12.2s): Grand Finale 5-Rocket Festival Barrage
-      else if (showStage === 4 && showTime >= 12.2) {
+      // Wave 5 (t=9.5s): Grand Finale 5-Rocket Festival Barrage
+      else if (showStage === 4 && showTime >= 9.5) {
         spawnRocket("chrysanthemum", FIREWORK_COLORS[0], -14, 0);
         spawnRocket("willow", FIREWORK_COLORS[1], -7, 4);
         spawnRocket("starburst", FIREWORK_COLORS[7], 0, 0);
@@ -562,18 +596,20 @@ export function createMountainFireworksDestination(): MountainDestination {
         spawnRocket("chrysanthemum", FIREWORK_COLORS[4], 14, 0);
         showStage = 5;
       }
-      // Show Completion (t=19.0s): Seamlessly return to ambient festive bursts
-      else if (showStage === 5 && showTime >= 19.0) {
-        showTime = -1;
+      // Loop show seamlessly so celebratory fireworks continue ("make the firecrackers come alot")
+      else if (showStage === 5 && showTime >= 13.0) {
+        showTime = 0;
         showStage = 0;
-        ambientTimer = 3.5;
       }
     } else {
-      // 2. Ambient Continuous Festive Bursts (gentle background fireworks every 3-5 seconds)
+      // 2. Ambient Continuous Festive Bursts (frequent dual bursts every 1.5 - 2.5s)
       ambientTimer -= delta;
       if (ambientTimer <= 0) {
         spawnRocket();
-        ambientTimer = 2.8 + Math.random() * 2.2;
+        if (Math.random() > 0.35) {
+          spawnRocket();
+        }
+        ambientTimer = 1.4 + Math.random() * 1.2;
       }
     }
 

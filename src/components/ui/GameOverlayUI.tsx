@@ -67,6 +67,7 @@ interface GameOverlayUIProps {
   onNextTVChannel?: () => void;
   onToggleLamps?: () => void;
   onTriggerFireworks?: () => void;
+  onSittingPOVChange?: (pov: "vista" | "first_person" | "couple") => void;
 }
 
 export function GameOverlayUI({
@@ -102,6 +103,7 @@ export function GameOverlayUI({
   onNextTVChannel,
   onToggleLamps,
   onTriggerFireworks,
+  onSittingPOVChange,
 }: GameOverlayUIProps) {
   const fastTravelSpots = [
     { id: "station-shiva", name: "Shiva Temple", icon: Flame, x: 14, z: -21 },
@@ -276,17 +278,44 @@ export function GameOverlayUI({
 
                 {/* Outdoors on Mountain Fireworks Bench */}
                 {!isInsideBuilding && (
-                  <button
-                    onClick={() => {
-                      if (onTriggerFireworks) onTriggerFireworks();
-                      else onInteractStation("station-mountain-bench");
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-yellow-400 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-lg shadow-amber-500/30 animate-pulse"
-                    title="Launch Choreographed Diwali Fireworks Show"
-                  >
-                    <Sparkles className="w-4 h-4 text-slate-950" />
-                    <span>Launch Fireworks 🎆</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        if (onTriggerFireworks) onTriggerFireworks();
+                        else onInteractStation("station-mountain-bench");
+                      }}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-yellow-400 text-slate-950 font-bold text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-lg shadow-amber-500/30"
+                      title="Launch Choreographed Diwali Fireworks Show"
+                    >
+                      <Sparkles className="w-4 h-4 text-slate-950" />
+                      <span>Launch Fireworks 🎆</span>
+                    </button>
+
+                    {/* Dynamic POV Controls */}
+                    <div className="flex items-center gap-1 pl-1 border-l border-amber-500/30">
+                      <button
+                        onClick={() => onSittingPOVChange?.("vista")}
+                        className="px-2.5 py-1 rounded-full bg-slate-900/80 hover:bg-amber-500/20 text-amber-200 border border-amber-500/30 hover:border-amber-400 text-[11px] font-semibold transition-all cursor-pointer"
+                        title="Scenic Sky View"
+                      >
+                        Fireworks Vista 🎆
+                      </button>
+                      <button
+                        onClick={() => onSittingPOVChange?.("first_person")}
+                        className="px-2.5 py-1 rounded-full bg-slate-900/80 hover:bg-amber-500/20 text-amber-200 border border-amber-500/30 hover:border-amber-400 text-[11px] font-semibold transition-all cursor-pointer"
+                        title="First Person Eye-Level View"
+                      >
+                        First Person 👁️
+                      </button>
+                      <button
+                        onClick={() => onSittingPOVChange?.("couple")}
+                        className="px-2.5 py-1 rounded-full bg-slate-900/80 hover:bg-amber-500/20 text-amber-200 border border-amber-500/30 hover:border-amber-400 text-[11px] font-semibold transition-all cursor-pointer"
+                        title="Couple Front View"
+                      >
+                        Couple 💑
+                      </button>
+                    </div>
+                  </>
                 )}
 
                 {/* Indoors in Sana's Living Suite */}

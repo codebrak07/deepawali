@@ -49,6 +49,7 @@ export class LocalitySceneEngine {
   public activeSeatAnchor: SeatAnchor | null = null;
   public isWatchingTV = false;
   public isHoldingHands = false;
+  public sittingPOV: "vista" | "first_person" | "couple" = "vista";
 
   // Camera Orbit Rig & State (GTA-Style calibrated defaults)
   public cameraMode: CameraViewMode = "story";
@@ -350,6 +351,21 @@ export class LocalitySceneEngine {
     }
   }
 
+  public setSittingPOV(pov: "vista" | "first_person" | "couple") {
+    this.sittingPOV = pov;
+    if (pov === "first_person") {
+      this.orbitPitch = 0.05;
+      this.orbitDistance = 0.0;
+    } else if (pov === "couple") {
+      this.orbitPitch = 0.12;
+      this.orbitDistance = 2.8;
+    } else {
+      this.orbitPitch = 0.04;
+      this.orbitDistance = 4.4;
+    }
+    this.manualLookTimer = 0;
+  }
+
   public triggerFirework() {
     this.mountainSuite.triggerFirework();
   }
@@ -446,10 +462,11 @@ export class LocalitySceneEngine {
 
     if (isTargetMountain) {
       // Direct summit observation deck positioning facing fireworks valley
-      targetY = 26.0;
-      spawnX = 104.2;
-      spawnZ = -93.8;
+      targetY = 10.2;
+      spawnX = 104.0;
+      spawnZ = -92.0;
       spawnRotation = -Math.PI * 0.75;
+      this.triggerMountainFireworks();
     } else {
       if (this.mountainSuite) {
         targetY = this.mountainSuite.getTrailElevation(x, z) ?? 0;
@@ -700,10 +717,10 @@ export class LocalitySceneEngine {
       const rightVec = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
       const fwdVec = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
 
-      // Aalekh seated on left side of bench, resting squarely on the velvet cushion
+      // Aalekh seated on left side of bench, resting squarely on top of velvet cushion
       const aalekhPos = anchor.position.clone()
-        .addScaledVector(rightVec, -0.36)
-        .addScaledVector(fwdVec, 0.05);
+        .addScaledVector(rightVec, -0.38)
+        .addScaledVector(fwdVec, -0.06);
       aalekhPos.y = anchor.position.y;
       this.charPos.copy(aalekhPos);
       this.charRotation = anchor.rotationY;
@@ -712,19 +729,28 @@ export class LocalitySceneEngine {
       this.aalekh.root.rotation.y = anchor.rotationY;
       this.aalekh.setSitting(true);
 
-      // Sana seated on right side of bench, resting squarely on the velvet cushion
+      // Sana seated on right side of bench, resting squarely on top of velvet cushion
       const sanaPos = anchor.position.clone()
-        .addScaledVector(rightVec, +0.36)
-        .addScaledVector(fwdVec, 0.05);
+        .addScaledVector(rightVec, +0.38)
+        .addScaledVector(fwdVec, -0.06);
       sanaPos.y = anchor.position.y;
       this.shirjana.root.position.copy(sanaPos);
       this.shirjana.root.rotation.y = anchor.rotationY;
       this.shirjana.setSitting(true);
 
-      // Third-person scenic camera framing: behind couple looking over shoulders at fireworks
+      // Immediately execute sitting pose kinematics for both characters
+      const curTime = this.clock.getElapsedTime();
+      this.aalekh.updateAnimation(false, curTime, 0);
+      this.shirjana.updateAnimation(false, curTime, 0);
+
+      // Third-person scenic camera framing: elevated behind couple looking UP into fireworks sky
       this.orbitYaw = anchor.rotationY + Math.PI;
-      this.orbitPitch = 0.14;
-      this.orbitDistance = 4.0;
+      this.orbitPitch = 0.04;
+      this.orbitDistance = 4.4;
+      this.sittingPOV = "vista";
+
+      // Launch celebratory Diwali fireworks immediately
+      this.triggerMountainFireworks();
     } else if (anchor.id === "seat-sofa-center") {
       this.charPos.set(anchor.position.x, anchor.position.y, anchor.position.z);
       this.charRotation = anchor.rotationY;
@@ -936,6 +962,9 @@ export class LocalitySceneEngine {
         this.standUp();
       } else {
         // Firmly maintain established seated positions with zero walking follow drift!
+        // ALWAYS update character animation while seated so bone rigs maintain seated posture!
+        this.aalekh.updateAnimation(false, time, 0);
+        this.shirjana.updateAnimation(false, time, 0);
         return;
       }
     }
@@ -1164,12 +1193,49 @@ export class LocalitySceneEngine {
       );
 
       if (isMountain) {
-        // Look ahead past couple towards the fireworks in the valley sky
-        this.targetLookAt.set(
-          anchor.position.x - sinYaw * 12.0,
-          targetY + 2.5 - sinPitch * 6.0,
-          anchor.position.z - cosYaw * 12.0
-        );
+        if (this.sittingPOV === "first_person") {
+          // Eye level POV from Aalekh looking directly into the fireworks sky
+          const aalekhEyeY = anchor.position.y + 1.35;
+          this.targetCameraPos.set(
+            this.charPos.x,
+            aalekhEyeY,
+            this.charPos.z
+          );
+          const fwdX = -Math.sin(this.orbitYaw);
+          const fwdZ = -Math.cos(this.orbitYaw);
+          this.targetLookAt.set(
+            this.charPos.x + fwdX * 25.0,
+            aalekhEyeY + 5.0 - this.orbitPitch * 8.0,
+            this.charPos.z + fwdZ * 25.0
+          );
+        } else if (this.sittingPOV === "couple") {
+          // Front 3/4 angle looking back at couple sitting together
+          const rightVec = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
+          const fwdVec = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), anchor.rotationY);
+          this.targetCameraPos.copy(anchor.position)
+            .addScaledVector(fwdVec, 2.2)
+            .addScaledVector(rightVec, 1.1)
+            .add(new THREE.Vector3(0, 0.75, 0));
+          this.targetLookAt.copy(anchor.position).add(new THREE.Vector3(0, 0.45, 0));
+        } else {
+          // "vista" (default) - Elevated cinematic over-the-shoulder vista (bench backrest NEVER blocks view)
+          this.targetCameraPos.set(
+            anchor.position.x + sinYaw * cosPitch * dist,
+            anchor.position.y + 1.85 + Math.max(0.1, sinPitch * dist),
+            anchor.position.z + cosYaw * cosPitch * dist
+          );
+          // Look up into the fireworks sky ahead!
+          this.targetLookAt.set(
+            anchor.position.x - sinYaw * 20.0,
+            anchor.position.y + 7.5 - sinPitch * 8.0,
+            anchor.position.z - cosYaw * 20.0
+          );
+        }
+
+        this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 7.0));
+        this.currentLookAt.lerp(this.targetLookAt, Math.min(1.0, delta * 7.0));
+        this.camera.lookAt(this.currentLookAt);
+        return;
       } else {
         this.targetLookAt.set(anchor.position.x, targetY, anchor.position.z);
       }
